@@ -24,7 +24,7 @@ The application layer decides *what happens*; the AI role supplies *intelligence
 
 ## The `AIProvider` interface
 
-Defined in `src/infrastructure/ai/types.ts`. This is the single interface the rest of the app depends on — adding a new vendor means implementing this and nothing else.
+Defined in `src/infrastructure/ai/types.ts`. This is the single interface the rest of the app depends on - adding a new vendor means implementing this and nothing else.
 
 ```ts
 export interface AIProvider {
@@ -55,7 +55,7 @@ Two providers implement `AIProvider`. Both route structured generation through t
 
 ### `GeminiAIProvider`
 
-`src/infrastructure/ai/gemini-provider.ts` — the **only** file that imports the Gemini SDK (`@google/genai`). Constructed with an API key and model name.
+`src/infrastructure/ai/gemini-provider.ts` - the **only** file that imports the Gemini SDK (`@google/genai`). Constructed with an API key and model name.
 
 - `generateText` calls `client.models.generateContent` with `systemInstruction`, `temperature` (default `0.7`), and `maxOutputTokens`.
 - `generateStructured` delegates to `runStructured`, whose `generate` callback calls the SDK with `responseMimeType: "application/json"` and a lower default `temperature` of `0.4`.
@@ -63,13 +63,13 @@ Two providers implement `AIProvider`. Both route structured generation through t
 
 ### `MockAIProvider`
 
-`src/infrastructure/ai/mock-provider.ts` — a deterministic offline provider used when no `GEMINI_API_KEY` is present, so the full product loop is runnable and testable without a live vendor.
+`src/infrastructure/ai/mock-provider.ts` - a deterministic offline provider used when no `GEMINI_API_KEY` is present, so the full product loop is runnable and testable without a live vendor.
 
 - `generateText` returns a short marker string (`【mock:<role>】 …`).
 - `generateStructured` looks up a canned response by `meta.role` in the `mockResponses` record. If no fixture exists for that role it throws `AIProviderError` telling you to add one or configure a key.
 - Canned output is still routed **through the same `runStructured` loop** (its `generate` just returns `JSON.stringify(canned(prompt))`), so the mock exercises the real validation path.
 
-Only one role fixture exists today: `"vietnamese-coach"`, which returns believable Vietnamese feedback. Notably, the mock **always** includes an `improvedVersion`. That does not violate the staged-coaching rule — stripping the rewrite before attempt 3 is the application layer's job, so the mock returning it makes the guardrail observable.
+Only one role fixture exists today: `"vietnamese-coach"`, which returns believable Vietnamese feedback. Notably, the mock **always** includes an `improvedVersion`. That does not violate the staged-coaching rule - stripping the rewrite before attempt 3 is the application layer's job, so the mock returning it makes the guardrail observable.
 
 ---
 
@@ -121,25 +121,25 @@ User prompt        = User context + Relevant memory + Task + Output contract
 - `buildSystemPrompt(roleRules)` → `GLOBAL_AI_RULES` + `---` + role rules. This is stable across all of a role's calls.
 - `buildUserPrompt(sections)` → assembles the per-call prompt from the optional `userContext`, optional `relevantMemory`, required `task`, and required `outputContract`, each under its own `#` heading.
 
-Only *relevant* context/memory should be passed in — never the whole database.
+Only *relevant* context/memory should be passed in - never the whole database.
 
 ### Global AI rules
 
-`GLOBAL_AI_RULES` (`src/infrastructure/ai/prompt/global-rules.ts`) is shared by every role and composed ahead of role-specific rules — never duplicated per role. Key directives:
+`GLOBAL_AI_RULES` (`src/infrastructure/ai/prompt/global-rules.ts`) is shared by every role and composed ahead of role-specific rules - never duplicated per role. Key directives:
 
-- Be human, direct, specific — sound like a real coach, not a corporate report.
+- Be human, direct, specific - sound like a real coach, not a corporate report.
 - Never invent the user's experience, projects, metrics, or background.
-- Preserve the user's voice: when rewriting, keep ~80–90% of original style/wording; rewrite aggressively only if the original is genuinely hard to understand.
-- Don't overcorrect — surface what matters most.
+- Preserve the user's voice: when rewriting, keep ~80-90% of original style/wording; rewrite aggressively only if the original is genuinely hard to understand.
+- Don't overcorrect - surface what matters most.
 - **Distinguish spoken from written language** (see below).
 - Teach before replacing; base any claim of a recurring weakness on repeated evidence.
-- Return only what the requested JSON schema asks for — no prose, no code fences.
+- Return only what the requested JSON schema asks for - no prose, no code fences.
 
 ### Spoken vs. written handling
 
 The system explicitly avoids treating natural speech as error. From the global rules, models must:
 
-- Treat natural spoken fillers (e.g. "you know", "yeah", "I mean", "actually") as **not automatically wrong** — flag them only when they genuinely hurt clarity or are used as a crutch.
+- Treat natural spoken fillers (e.g. "you know", "yeah", "I mean", "actually") as **not automatically wrong** - flag them only when they genuinely hurt clarity or are used as a crutch.
 - Classify along a spectrum: *natural / acceptable / context-dependent / awkward / incorrect*, and not treat casual-but-valid speech as an error.
 
 This distinction is reinforced in the domain taxonomy, where `filler` is an *English* code and `filler_usage` is a tracked skill dimension (`src/domain/feedback/taxonomy.ts`) rather than an automatic penalty.
@@ -175,7 +175,7 @@ Only `vietnamese-coach` exists in `src/infrastructure/ai/roles/` and in the mock
 
 ## Structured output: contract, validation & failure handling
 
-Structured output is the core reliability mechanism. Every structured response is validated against a Zod schema — **unvalidated output is never trusted**.
+Structured output is the core reliability mechanism. Every structured response is validated against a Zod schema - **unvalidated output is never trusted**.
 
 ### Output contract
 
@@ -186,16 +186,16 @@ The domain schema `vietnameseCoachFeedbackSchema` (`src/domain/practice/vietname
 | `summary` | non-empty string |
 | `strengths` | `string[]`, defaults `[]` |
 | `issues` | array of `{ category: "thinking"|"communication", code, title, detail }` |
-| `reflectionQuestions` | `string[]` — core of the diagnose stage |
-| `suggestions` | `string[]` — direction/hints from the guide stage on |
-| `improvedVersion` | `string \| null`, defaults `null` — permitted only from attempt 3+ |
+| `reflectionQuestions` | `string[]` - core of the diagnose stage |
+| `suggestions` | `string[]` - direction/hints from the guide stage on |
+| `improvedVersion` | `string \| null`, defaults `null` - permitted only from attempt 3+ |
 | `nextAction` | `"retry" \| "satisfied_or_retry"` |
 
 `issues[].code` is validated against the union `[...THINKING_CODES, ...COMMUNICATION_CODES]` from the taxonomy, so the coach cannot emit an off-taxonomy code.
 
 ### The `runStructured` algorithm
 
-`src/infrastructure/ai/structured.ts`. Provider-agnostic — each provider supplies a `generate(prompt)` callback and the loop handles extraction, parsing, validation, and repair.
+`src/infrastructure/ai/structured.ts`. Provider-agnostic - each provider supplies a `generate(prompt)` callback and the loop handles extraction, parsing, validation, and repair.
 
 ```
 for attempt = 1..3:
@@ -213,13 +213,13 @@ throw AIStructuredError(message, lastRaw, lastError)
 
 Behavior by attempt:
 
-1. **Attempt 1** — normal generation.
-2. **Attempt 2** — plain retry (same base prompt); handles transient bad output.
-3. **Attempt 3** — **schema-repair prompt**: the base prompt plus the previous raw response and the recorded error, instructing the model to return *only* corrected JSON matching the schema with no prose or fences.
+1. **Attempt 1** - normal generation.
+2. **Attempt 2** - plain retry (same base prompt); handles transient bad output.
+3. **Attempt 3** - **schema-repair prompt**: the base prompt plus the previous raw response and the recorded error, instructing the model to return *only* corrected JSON matching the schema with no prose or fences.
 
 If all three attempts fail, it throws `AIStructuredError` (`src/infrastructure/ai/errors.ts`) carrying `lastRaw` and `validationError` for diagnostics.
 
-`extractJson()` defensively pulls a JSON object/array out of the response — it unwraps ```` ```json ```` fences and, failing that, slices from the first `[`/`{` to the last `]`/`}` — because models sometimes wrap JSON in prose even when told not to.
+`extractJson()` defensively pulls a JSON object/array out of the response - it unwraps ```` ```json ```` fences and, failing that, slices from the first `[`/`{` to the last `]`/`}` - because models sometimes wrap JSON in prose even when told not to.
 
 ### Error types
 
@@ -235,7 +235,7 @@ The application service `submitVietnameseAttempt` (`src/application/practice/vie
 1. It **persists the user's answer first** (`createAttempt`) before calling the AI.
 2. It runs `runVietnameseCoach(...)`.
 3. On success it enforces the coaching policy (below) and saves feedback.
-4. On a **known** failure (`AIStructuredError` or `AIProviderError`) it logs `vietnamese_attempt_failed` and returns a structured result `{ ok: false, attemptId, attemptNumber, error: "ai_failed", message }` — the saved attempt id is still returned so the UI can recover. Unknown errors are rethrown.
+4. On a **known** failure (`AIStructuredError` or `AIProviderError`) it logs `vietnamese_attempt_failed` and returns a structured result `{ ok: false, attemptId, attemptNumber, error: "ai_failed", message }` - the saved attempt id is still returned so the UI can recover. Unknown errors are rethrown.
 
 The returned failure message: *"Something went wrong while analyzing your answer. Your work has been saved locally."*
 
@@ -253,7 +253,7 @@ The staged-coaching guardrail is owned by the application layer, not the AI. Pur
 | 2 | `guide` | false | true | Guide |
 | 3+ | `improve` | true | true | Improve |
 
-`enforceCoachingPolicy(feedback, policy)` is the hard guardrail: if `!canRevealImprovedVersion` and `feedback.improvedVersion` is set, it returns a copy with `improvedVersion: null`. This runs **regardless of what the model returned**, so the acceptance criteria hold even if a model ignores its stage instruction — which is exactly why the mock always returns a rewrite.
+`enforceCoachingPolicy(feedback, policy)` is the hard guardrail: if `!canRevealImprovedVersion` and `feedback.improvedVersion` is set, it returns a copy with `improvedVersion: null`. This runs **regardless of what the model returned**, so the acceptance criteria hold even if a model ignores its stage instruction - which is exactly why the mock always returns a rewrite.
 
 The application service decides the attempt number (`countAttempts + 1`), derives the policy, prompts the role with that stage, enforces the policy on the result, then persists. Session completion is user-controlled (`completeVietnameseSession` / `abandonVietnameseSession`), never inferred by the AI.
 
@@ -272,10 +272,10 @@ Storing the version alongside saved feedback means historical results can be att
 
 ## Observability & logging
 
-`src/lib/logger.ts` provides a minimal structured logger (level-gated by `LOG_LEVEL`, JSON lines). It logs operational metadata only — never raw personal content or audio.
+`src/lib/logger.ts` provides a minimal structured logger (level-gated by `LOG_LEVEL`, JSON lines). It logs operational metadata only - never raw personal content or audio.
 
-- `logger.info("ai_provider_selected", { provider, model? })` — emitted by the factory on first use.
-- `logAiCall(record: AiCallLog)` — emitted by **both** providers on every structured/text call, success or failure.
+- `logger.info("ai_provider_selected", { provider, model? })` - emitted by the factory on first use.
+- `logAiCall(record: AiCallLog)` - emitted by **both** providers on every structured/text call, success or failure.
 
 `AiCallLog` fields:
 
@@ -303,5 +303,5 @@ Application-level failures are additionally logged as `vietnamese_attempt_failed
 
 ## Related tests
 
-- `src/domain/practice/coaching-stage.test.ts` — policy + `enforceCoachingPolicy` guardrail.
-- `src/application/practice/vietnamese-coach-service.test.ts` — end-to-end coaching loop against the mock provider and a temp SQLite database.
+- `src/domain/practice/coaching-stage.test.ts` - policy + `enforceCoachingPolicy` guardrail.
+- `src/application/practice/vietnamese-coach-service.test.ts` - end-to-end coaching loop against the mock provider and a temp SQLite database.

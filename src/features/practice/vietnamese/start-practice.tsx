@@ -55,7 +55,7 @@ export function StartPractice() {
         </h1>
         <p className="text-muted-foreground">
           Turn messy thoughts into clear, structured communication. Answer in
-          Vietnamese — the coach diagnoses first, and only shows a rewrite once
+          Vietnamese - the coach diagnoses first, and only shows a rewrite once
           you&apos;ve worked on it yourself.
         </p>
       </header>

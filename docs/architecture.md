@@ -2,8 +2,8 @@
 
 The AI Communication & Interview Trainer is a **local-first** application built on
 Next.js 16 (App Router), React 19, TypeScript (strict), Tailwind v4, SQLite +
-Drizzle, and Zod. AI runs through a provider abstraction — Gemini via
-`@google/genai` when a key is present, otherwise a deterministic mock — so the
+Drizzle, and Zod. AI runs through a provider abstraction - Gemini via
+`@google/genai` when a key is present, otherwise a deterministic mock - so the
 whole product loop is runnable and testable offline.
 
 This document describes the layered architecture, the dependency rules that keep
@@ -24,7 +24,7 @@ src/app          UI + server actions        (delivery / framework)
 src/application  services own the workflow   (use cases / orchestration)
       │  depends on
       ▼
-src/domain       pure rules, types, schemas  (business core — no I/O)
+src/domain       pure rules, types, schemas  (business core - no I/O)
       ▲  depends on
       │
 src/infrastructure  ai / db / audio / speech / file-storage  (adapters)
@@ -45,11 +45,11 @@ Cross-cutting helpers live in `src/lib` (`env.ts`, `logger.ts`, `ids.ts`,
 `src/domain` contains no imports of Next.js, Drizzle, the Gemini SDK, or `node:*`
 I/O. It holds:
 
-- Entity types — `src/domain/practice/types.ts` (`PracticeSession`,
+- Entity types - `src/domain/practice/types.ts` (`PracticeSession`,
   `PracticeAttempt`, `VIETNAMESE_EXERCISE_TYPES`, `EXERCISE_LABELS`).
-- The **staged-coaching rule** — `src/domain/practice/coaching-stage.ts`.
-- Output contracts / Zod schemas — `src/domain/practice/vietnamese-feedback.ts`.
-- The feedback taxonomy and skill dimensions —
+- The **staged-coaching rule** - `src/domain/practice/coaching-stage.ts`.
+- Output contracts / Zod schemas - `src/domain/practice/vietnamese-feedback.ts`.
+- The feedback taxonomy and skill dimensions -
   `src/domain/feedback/taxonomy.ts`.
 
 Because it is pure, the domain is trivially unit-testable
@@ -59,8 +59,8 @@ Because it is pure, the domain is trivially unit-testable
 
 The rule "**the application controls the workflow; the AI only provides
 intelligence**" is enforced in
-`src/application/practice/vietnamese-coach-service.ts`. That service — not the AI,
-not the UI — decides:
+`src/application/practice/vietnamese-coach-service.ts`. That service - not the AI,
+not the UI - decides:
 
 - the attempt number (`practiceRepository.countAttempts(...) + 1`),
 - the coaching stage/policy (`coachingPolicyForAttempt(attemptNumber)`),
@@ -68,7 +68,7 @@ not the UI — decides:
   AI failure,
 - that the staged-coaching guardrail is applied to whatever the AI returns
   (`enforceCoachingPolicy(raw, policy)`),
-- when a session completes (`completeVietnameseSession` — user-driven).
+- when a session completes (`completeVietnameseSession` - user-driven).
 
 ---
 
@@ -85,7 +85,7 @@ not the UI — decides:
      `@google/genai`.
    - `src/infrastructure/db/client.ts` is the *only* file that opens the SQLite
      connection.
-   Adding a new AI vendor or swapping the datastore means writing a new adapter —
+   Adding a new AI vendor or swapping the datastore means writing a new adapter -
    no product logic changes.
 4. **UI may import infrastructure *types*, never infrastructure *behavior*.**
    Components import types such as `AttemptWithFeedback` from the repository
@@ -119,7 +119,7 @@ Drizzle + better-sqlite3 (src/infrastructure/db/client.ts, schema.ts)
   attempt to pull it into a client bundle is a build error.
 - Server actions in `src/app/practice/vietnamese/actions.ts` call the service for
   the coaching loop. A few thin, non-workflow mutations (e.g.
-  `deleteAttemptAction`) call the repository directly from the action — still
+  `deleteAttemptAction`) call the repository directly from the action - still
   server-side, still never from a component.
 
 ### Database
@@ -167,8 +167,8 @@ AI role (src/infrastructure/ai/roles/vietnamese-coach.ts)  → runVietnameseCoac
         ▼
 AIProvider interface (src/infrastructure/ai/types.ts)
         │
-        ├── GeminiAIProvider  (gemini-provider.ts — only file importing @google/genai)
-        └── MockAIProvider    (mock-provider.ts — deterministic offline fallback)
+        ├── GeminiAIProvider  (gemini-provider.ts - only file importing @google/genai)
+        └── MockAIProvider    (mock-provider.ts - deterministic offline fallback)
 ```
 
 ### Provider abstraction
@@ -204,14 +204,14 @@ failure policy:
 | still invalid | Throw `AIStructuredError` (from `src/infrastructure/ai/errors.ts`) so the caller can preserve the user's work |
 
 `extractJson()` defensively strips code fences / surrounding prose before parsing.
-The **Zod schema is the single source of truth** for the shape — for the
+The **Zod schema is the single source of truth** for the shape - for the
 Vietnamese coach that is `vietnameseCoachFeedbackSchema` in
 `src/domain/practice/vietnamese-feedback.ts`.
 
 Two error types are distinguished in `errors.ts`:
 
-- `AIProviderError` — the provider was unreachable (network/quota).
-- `AIStructuredError` — the provider replied but never produced schema-valid
+- `AIProviderError` - the provider was unreachable (network/quota).
+- `AIStructuredError` - the provider replied but never produced schema-valid
   output.
 
 The service catches both and returns a soft-failure result
@@ -227,13 +227,13 @@ Prompts are composed from discrete sections, not one giant string
 GLOBAL_AI_RULES + Role Rules + User Context + Relevant Memory + Task + Output Contract
 ```
 
-- `global-rules.ts` — `GLOBAL_AI_RULES`, shared by every role (composed once,
+- `global-rules.ts` - `GLOBAL_AI_RULES`, shared by every role (composed once,
   never duplicated per role).
-- `builder.ts` — `buildSystemPrompt(roleRules)` and `buildUserPrompt(sections)`.
-- `roles/vietnamese-coach.ts` — the role module. It carries a **prompt version**
+- `builder.ts` - `buildSystemPrompt(roleRules)` and `buildUserPrompt(sections)`.
+- `roles/vietnamese-coach.ts` - the role module. It carries a **prompt version**
   (`VIETNAMESE_COACH_PROMPT_VERSION = "vietnamese-coach@1.0"`), its role rules,
   the per-attempt task builder, and the output contract. Only *relevant*
-  context/memory is passed in — never the whole DB.
+  context/memory is passed in - never the whole DB.
 
 ### The staged-coaching business rule (critical)
 
@@ -242,13 +242,13 @@ what the model returns:
 
 | Attempt | Stage | Rewrite allowed? | Direction hints? |
 | --- | --- | --- | --- |
-| 1 | `diagnose` | No | No — diagnosis + reflection questions |
-| 2 | `guide` | No | Yes — direction / structure hints |
-| 3+ | `improve` | **Yes** — improved version may be revealed | Yes |
+| 1 | `diagnose` | No | No - diagnosis + reflection questions |
+| 2 | `guide` | No | Yes - direction / structure hints |
+| 3+ | `improve` | **Yes** - improved version may be revealed | Yes |
 
 `coachingPolicyForAttempt(attemptNumber)` computes the policy;
 `enforceCoachingPolicy(feedback, policy)` **strips `improvedVersion` whenever the
-policy forbids it** — even if the AI (or the mock) returned one. The prompt asks
+policy forbids it** - even if the AI (or the mock) returned one. The prompt asks
 the model to obey the stage, but the guarantee does not depend on the model
 complying: it is enforced deterministically in the pure domain module and applied
 by the service.
@@ -256,7 +256,7 @@ by the service.
 ### Observability
 
 Every AI call is logged via `logAiCall()` in `src/lib/logger.ts` with
-operational metadata only — `role`, `promptVersion`, `provider`, `sessionId`,
+operational metadata only - `role`, `promptVersion`, `provider`, `sessionId`,
 `latencyMs`, `ok`, and `schemaError`. Raw personal content and audio are never
 logged.
 
@@ -267,25 +267,25 @@ logged.
 Server-only concerns are fenced off with the `server-only` package so they can
 never be bundled into client code. Files that begin with `import "server-only"`:
 
-- `src/lib/env.ts` — validates `process.env` with Zod. **`GEMINI_API_KEY` is
+- `src/lib/env.ts` - validates `process.env` with Zod. **`GEMINI_API_KEY` is
   read here and must never reach the browser.** If the key is absent, the app
   falls back to the mock provider, so it stays runnable end-to-end.
-- `src/infrastructure/ai/provider.ts` — the provider factory.
-- `src/infrastructure/db/client.ts` — the SQLite connection.
-- `src/infrastructure/db/repositories/practice-repository.ts` — all queries.
-- `src/infrastructure/audio/local-audio-storage.ts` — filesystem audio storage.
-- `src/application/practice/vietnamese-coach-service.ts` — the workflow service.
+- `src/infrastructure/ai/provider.ts` - the provider factory.
+- `src/infrastructure/db/client.ts` - the SQLite connection.
+- `src/infrastructure/db/repositories/practice-repository.ts` - all queries.
+- `src/infrastructure/audio/local-audio-storage.ts` - filesystem audio storage.
+- `src/application/practice/vietnamese-coach-service.ts` - the workflow service.
 
 Complementary boundaries:
 
-- **Server Actions** — `src/app/practice/vietnamese/actions.ts` starts with
+- **Server Actions** - `src/app/practice/vietnamese/actions.ts` starts with
   `"use server"`. Actions validate their inputs with Zod, call the service, and
   `revalidatePath(...)` afterwards.
-- **Client Components** — interactive UI such as
+- **Client Components** - interactive UI such as
   `src/features/practice/vietnamese/vietnamese-practice.tsx` starts with
   `"use client"`. Client components import server actions and *types* only; they
   never import the DB client, provider factory, or repository behavior.
-- **Server Components** — pages such as
+- **Server Components** - pages such as
   `src/app/practice/vietnamese/page.tsx` run on the server, call the service to
   load state (`getSessionState`), and pass plain data to client components.
 
@@ -311,9 +311,9 @@ src/
 │   └── practice/
 │       ├── page.tsx
 │       ├── vietnamese/
-│       │   ├── page.tsx        # Server Component — loads session state
-│       │   └── actions.ts      # "use server" — validated server actions
-│       └── english/page.tsx    # Placeholder — Planned (Phase 2)
+│       │   ├── page.tsx        # Server Component - loads session state
+│       │   └── actions.ts      # "use server" - validated server actions
+│       └── english/page.tsx    # Placeholder - Planned (Phase 2)
 │
 ├── application/                # Use cases / workflow orchestration
 │   └── practice/
@@ -343,7 +343,7 @@ src/
 │   │   ├── schema.ts           # Drizzle tables
 │   │   └── repositories/practice-repository.ts
 │   ├── audio/                  # AudioStorage interface + LocalAudioStorage
-│   └── speech/                 # SpeechProvider interface — Planned (Phase 2)
+│   └── speech/                 # SpeechProvider interface - Planned (Phase 2)
 │
 ├── features/                   # Feature-scoped client UI (composed views)
 │   └── practice/vietnamese/    # vietnamese-practice, start-practice, feedback-view
@@ -405,7 +405,7 @@ Invalid configuration fails fast at startup with a readable message.
   the workflow is exercised end-to-end against the mock provider and a temporary
   SQLite database (`vietnamese-coach-service.test.ts`). Run with `pnpm test`.
 - **Linting** via `eslint` with `eslint-config-next` (core-web-vitals +
-  typescript) — `pnpm lint`.
+  typescript) - `pnpm lint`.
 - **Prompt versioning.** Each AI role exports a version string (e.g.
   `vietnamese-coach@1.0`) that is persisted with every `feedback_items` row and
   logged with every call, so feedback is traceable to the prompt that produced
@@ -415,10 +415,10 @@ Invalid configuration fails fast at startup with a readable message.
 
 ## 9. Roadmap markers
 
-- **English voice loop** — `src/app/practice/english/page.tsx` is a placeholder.
+- **English voice loop** - `src/app/practice/english/page.tsx` is a placeholder.
   The `AudioStorage` and `SpeechProvider` interfaces exist; recording,
   transcription, and spoken-English analysis are **Planned (Phase 2)**.
-- **Memory / progress / flashcards** — the taxonomy defines `SKILL_DIMENSIONS`
+- **Memory / progress / flashcards** - the taxonomy defines `SKILL_DIMENSIONS`
   and the `ids` helper reserves prefixes (`mem_`, `card_`, `ev_`), but the
   corresponding tables and services are **Planned (later phases)**; the schema
   comment notes these tables are added per phase.

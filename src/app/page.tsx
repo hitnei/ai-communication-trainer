@@ -59,7 +59,7 @@ export default function DashboardPage() {
               <CardTitle className="text-base">
                 Explain a technical blocker in 45 seconds
               </CardTitle>
-              <Badge variant="muted">≈ 8–10 min</Badge>
+              <Badge variant="muted">≈ 8-10 min</Badge>
             </div>
             <CardDescription>
               <span className="font-medium text-foreground">Why this? </span>

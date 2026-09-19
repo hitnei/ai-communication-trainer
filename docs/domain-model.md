@@ -2,7 +2,7 @@
 
 The `src/domain` layer holds the pure business rules, types, and schemas for the
 AI Communication & Interview Trainer. It has **no** dependencies on the database,
-the AI provider, or Next.js — everything here is deterministic and unit-testable.
+the AI provider, or Next.js - everything here is deterministic and unit-testable.
 The application layer (`src/application`) orchestrates these rules; the
 infrastructure layer persists and executes them.
 
@@ -110,7 +110,7 @@ erDiagram
 
 > `profiles` exists in the schema and carries user context (`currentRole`,
 > `targetRole`, `targetMarkets`, `primarySkills`, `transcriptMode`, …), but there
-> is no foreign key from `practice_sessions` to `profiles` yet — the link shown
+> is no foreign key from `practice_sessions` to `profiles` yet - the link shown
 > above is **Planned**.
 
 ---
@@ -159,15 +159,15 @@ behavior.
 ### Who owns what
 
 Ownership lives in `src/application/practice/vietnamese-coach-service.ts`
-(Rule 3 — the application owns the workflow):
+(Rule 3 - the application owns the workflow):
 
-- **Attempt numbering** — `countAttempts(sessionId) + 1`, not the AI.
-- **Stage selection** — `coachingPolicyForAttempt(attemptNumber)`.
-- **Enforcement** — `enforceCoachingPolicy(raw, policy)` before saving.
-- **Completion** — the user controls it via
+- **Attempt numbering** - `countAttempts(sessionId) + 1`, not the AI.
+- **Stage selection** - `coachingPolicyForAttempt(attemptNumber)`.
+- **Enforcement** - `enforceCoachingPolicy(raw, policy)` before saving.
+- **Completion** - the user controls it via
   `completeVietnameseSession` / `abandonVietnameseSession`; the AI's
   `nextAction` is advisory only.
-- **Durability** — the user's `textAnswer` is written *before* the AI call, so
+- **Durability** - the user's `textAnswer` is written *before* the AI call, so
   work is preserved on AI failure.
 
 ---
@@ -198,7 +198,7 @@ element type.
 > Vietnamese coaching (the currently implemented loop) uses only the `thinking`
 > and `communication` codes. The `english`, `pronunciation`, and `interview`
 > codes exist in the taxonomy for later phases (English speaking / interview
-> modes) — treat their consumption as **Planned**.
+> modes) - treat their consumption as **Planned**.
 
 ### Skill dimensions
 
@@ -220,11 +220,11 @@ dimensions themselves are defined and stable.
 
 The structured output contract for the Vietnamese Coach, defined with Zod in
 `src/domain/practice/vietnamese-feedback.ts`. Every AI response is validated
-against this — unvalidated output is never trusted or persisted.
+against this - unvalidated output is never trusted or persisted.
 
 A core rule (§19): Vietnamese coaching **separates thinking problems from
 communication problems** and must not conflate language issues with thinking
-issues. This is enforced structurally — an issue's `category` is restricted to
+issues. This is enforced structurally - an issue's `category` is restricted to
 `thinking | communication`, and its `code` is restricted to the union of only
 `THINKING_CODES` and `COMMUNICATION_CODES`.
 
@@ -241,11 +241,11 @@ issues. This is enforced structurally — an issue's `category` is restricted to
 
 | Field | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `summary` | `string` (min 1) | — | Overall assessment. |
+| `summary` | `string` (min 1) | - | Overall assessment. |
 | `strengths` | `string[]` | `[]` | |
 | `issues` | `VietnameseIssue[]` | `[]` | The thinking/communication findings. |
 | `reflectionQuestions` | `string[]` | `[]` | Core of attempt 1 (diagnose stage). |
-| `suggestions` | `string[]` | `[]` | Direction / structure hints — allowed from attempt 2 (guide). |
+| `suggestions` | `string[]` | `[]` | Direction / structure hints - allowed from attempt 2 (guide). |
 | `improvedVersion` | `string \| null` | `null` | Full rewrite. Only permitted from attempt 3+; stripped earlier by `enforceCoachingPolicy`. |
 | `nextAction` | `"retry" \| "satisfied_or_retry"` | `"retry"` | Advisory; the **user** controls completion. |
 

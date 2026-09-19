@@ -1,6 +1,6 @@
 # AI Communication & Interview Trainer
 
-A **local-first** personal communication coach, English-speaking coach, and interviewer — built to help a Senior Frontend Engineer communicate clearly, logically, concisely, and naturally, and perform well in interviews.
+A **local-first** personal communication coach, English-speaking coach, and interviewer - built to help a Senior Frontend Engineer communicate clearly, logically, concisely, and naturally, and perform well in interviews.
 
 This is a structured **training system**, not a chatbot. The core loop:
 
@@ -11,9 +11,9 @@ You communicate → AI analyzes → root problem → you retry → attempts comp
 
 ## Status
 
-- **Phase 0 — Foundation:** ✅ complete
-- **Phase 1 — Vietnamese Coach (staged coaching loop):** ✅ complete
-- Phases 2–9 (English voice, interviews, memory, question bank, progress, flashcards, CV/JD): planned. See [docs/development-phases.md](docs/development-phases.md).
+- **Phase 0 - Foundation:** ✅ complete
+- **Phase 1 - Vietnamese Coach (staged coaching loop):** ✅ complete
+- Phases 2-9 (English voice, interviews, memory, question bank, progress, flashcards, CV/JD): planned. See [docs/development-phases.md](docs/development-phases.md).
 
 ## Stack
 

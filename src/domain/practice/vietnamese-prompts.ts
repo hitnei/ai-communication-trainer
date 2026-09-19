@@ -35,7 +35,7 @@ export const VIETNAMESE_PROMPTS: Record<VietnameseExerciseType, string[]> = {
     "Giới thiệu ngắn gọn về bản thân trong một buổi gặp mặt team mới.",
   ],
   rewrite_messy: [
-    "Viết ra suy nghĩ lộn xộn hiện tại của bạn về một vấn đề bất kỳ — sau đó ta sẽ cùng làm nó rõ ràng hơn.",
+    "Viết ra suy nghĩ lộn xộn hiện tại của bạn về một vấn đề bất kỳ - sau đó ta sẽ cùng làm nó rõ ràng hơn.",
   ],
 };
 

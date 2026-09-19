@@ -1,4 +1,4 @@
-# Product Spec — AI Communication & Interview Trainer
+# Product Spec - AI Communication & Interview Trainer
 
 > **Source-of-truth product document.** This spec is synthesized from the master
 > product prompt (the `§` references throughout point at its numbered rules, which
@@ -16,7 +16,7 @@
 
 This is a **personal communication and interview trainer** for one senior
 engineer, not a general-purpose chatbot. It exists to make the user think more
-clearly, speak more naturally, and hold up under interview pressure — in that
+clearly, speak more naturally, and hold up under interview pressure - in that
 order. The AI supplies intelligence; the **application owns the workflow** and
 the pedagogy.
 
@@ -27,10 +27,10 @@ progression a user moves through:
 | ----- | ---- | -------------- | ---------------- | ------ |
 | 1 | **Think Clearly** | Turning a messy thought into a clear, structured, concise, complete point. Thinking + communication, *not* language. | Vietnamese | ✅ Built (Phase 1) |
 | 2 | **Speak Naturally** | Saying the same clear thing in natural, fluent spoken English. Grammar, vocabulary, naturalness, fluency, filler, pronunciation. | English (voice-first) | ⬜ Planned (Phase 2) |
-| 3 | **Perform Under Pressure** | Answering real interview questions with depth, trade-offs, concrete examples, and metrics — individually and in full simulation. | English | ⬜ Planned (Phase 3+) |
+| 3 | **Perform Under Pressure** | Answering real interview questions with depth, trade-offs, concrete examples, and metrics - individually and in full simulation. | English | ⬜ Planned (Phase 3+) |
 
-The deliberate sequencing — **fix the thinking in the user's native language
-first, then move it into English, then apply it under interview pressure** — is a
+The deliberate sequencing - **fix the thinking in the user's native language
+first, then move it into English, then apply it under interview pressure** - is a
 core product belief, reflected in the Dashboard copy ("Start in Vietnamese to fix
 the thinking first, then move it into English later").
 
@@ -79,7 +79,7 @@ The loop is **iterative and user-controlled**: after each attempt the user
 chooses **"Keep improving"** (retry) or **"I'm satisfied"** (complete). The app
 never auto-completes a session and never decides the user is "done."
 
-### 3.1 Staged coaching — the critical business rule (§18, §69, §103)
+### 3.1 Staged coaching - the critical business rule (§18, §69, §103)
 
 The coach reveals help progressively across attempts. This is enforced by the
 application, independent of what the AI returns.
@@ -94,14 +94,14 @@ application, independent of what the AI returns.
   ask reflection questions. No rewrite, no finished structure.
 - **Attempt 2 (Guide):** give direction and structural hints so the user
   improves it themselves. Still no full rewrite.
-- **Attempt 3+ (Improve):** an improved version *may* be shown, keeping ~80–90%
+- **Attempt 3+ (Improve):** an improved version *may* be shown, keeping ~80-90%
   of the user's own wording.
 
 **Implementation:**
 - Pure policy: `coachingPolicyForAttempt()` in
   `src/domain/practice/coaching-stage.ts` returns `{ stage, canRevealImprovedVersion, canGiveDirection, label }`.
 - Hard guardrail: `enforceCoachingPolicy()` **strips `improvedVersion` to `null`**
-  whenever the stage does not permit it — even if the model ignored its
+  whenever the stage does not permit it - even if the model ignored its
   instructions.
 - Workflow ownership (Rule 3): `submitVietnameseAttempt()` in
   `src/application/practice/vietnamese-coach-service.ts` decides the attempt
@@ -113,7 +113,7 @@ application, independent of what the AI returns.
 
 - The user's answer is persisted **before** the AI is called
   (`createAttempt` runs first), so **work is never lost** on an AI failure
-  (§65, §77). On failure the UI shows "Your work was saved — you can try
+  (§65, §77). On failure the UI shows "Your work was saved - you can try
   submitting again."
 - Unfinished sessions are recoverable: `getActiveVietnameseSession()` surfaces an
   active session on the Dashboard with a **Continue** link (§78).
@@ -128,7 +128,7 @@ These constraints hold across every module and every AI role. Several are encode
 directly in code and tests.
 
 1. **Not a generic chatbot.** The system prompt opens: *"You are part of a
-   personal communication and interview training system — not a generic
+   personal communication and interview training system - not a generic
    chatbot."* (`GLOBAL_AI_RULES`, `src/infrastructure/ai/prompt/global-rules.ts`).
    There is no free-form chat surface.
 2. **The app controls the workflow; the AI provides intelligence (Rule 3).**
@@ -136,9 +136,9 @@ directly in code and tests.
    owned by the application/domain layers. The AI only analyzes.
 3. **Preserve user agency.** The user always decides when a session is good
    enough ("I'm satisfied" / "Keep improving"). Nothing auto-completes.
-4. **Preserve the user's voice.** Rewrites keep ~80–90% of the original style and
+4. **Preserve the user's voice.** Rewrites keep ~80-90% of the original style and
    wording; aggressive rewriting only when the original is genuinely unclear.
-5. **Human tone.** Sound like a real coach — direct and specific — never a
+5. **Human tone.** Sound like a real coach - direct and specific - never a
    textbook or corporate report. Corporate phrasing like *"Your response
    demonstrates insufficient structural coherence"* is explicitly forbidden.
 6. **Don't invent the user.** Never fabricate the user's experience, projects,
@@ -156,7 +156,7 @@ directly in code and tests.
    coaching is explicitly *not* an English lesson.
 10. **Local-first & private.** All data lives locally (SQLite + local audio
     files). `GEMINI_API_KEY` is **server-only** and must never reach the browser
-    (§5, §88). Logs record operational metadata only — never raw personal content
+    (§5, §88). Logs record operational metadata only - never raw personal content
     or audio (§92).
 11. **Validated AI output only.** Every structured AI response is validated
     against a Zod schema; unvalidated output is never trusted (§64).
@@ -182,7 +182,7 @@ drives the "coming soon" state for modules not yet built.
 | **Progress** | `/progress` | ⬜ Planned | `available: false`. Skill dimensions defined (§8). |
 | **Profile** | `/profile` | ⬜ Planned | `available: false`. Profile schema exists. |
 
-### 5.1 Vietnamese Practice (Layer 1 — Think Clearly) ✅
+### 5.1 Vietnamese Practice (Layer 1 - Think Clearly) ✅
 
 Trains thinking + communication in the user's native language.
 
@@ -205,16 +205,16 @@ Trains thinking + communication in the user's native language.
   | `improvedVersion` | `null` unless the improve stage (also stripped by the guardrail). |
   | `nextAction` | `retry` \| `satisfied_or_retry`. |
 
-### 5.2 English Practice (Layer 2 — Speak Naturally) 🟡 / ⬜ Planned (Phase 2)
+### 5.2 English Practice (Layer 2 - Speak Naturally) 🟡 / ⬜ Planned (Phase 2)
 
 Voice-first spoken-English practice. The current page is a placeholder; the
 **architecture is already in place** so the loop can be added without touching
 product logic (§6):
 
 - `AudioStorage` interface (`src/infrastructure/audio/types.ts`) with
-  `LocalAudioStorage` — recordings stored as **local files**, never SQLite blobs;
+  `LocalAudioStorage` - recordings stored as **local files**, never SQLite blobs;
   the DB holds only metadata (§8).
-- `SpeechProvider` interface (`src/infrastructure/speech/types.ts`) —
+- `SpeechProvider` interface (`src/infrastructure/speech/types.ts`) -
   `transcribe()` plus optional `synthesize()` for a pronunciation "listen"
   feature (§26).
 - `profiles.transcriptMode` (default `"after"`) controls when transcripts appear
@@ -223,7 +223,7 @@ product logic (§6):
   (`grammar`, `vocabulary`, `unnatural_phrase`, `fluency`, `filler`) and
   `PRONUNCIATION_CODES` (`word_clarity`, `stress`, `rhythm`, `intelligibility`).
 
-### 5.3 Interview (Layer 3 — Perform Under Pressure) ⬜ Planned (Phase 3+)
+### 5.3 Interview (Layer 3 - Perform Under Pressure) ⬜ Planned (Phase 3+)
 
 Individual question practice and full interview simulation. Not yet built. The
 taxonomy is pre-defined: `INTERVIEW_CODES` (`too_generic`, `insufficient_depth`,
@@ -240,7 +240,7 @@ taxonomy is pre-defined: `INTERVIEW_CODES` (`too_generic`, `insufficient_depth`,
   `vocabulary`, `naturalness`, `fluency`, `filler_usage`, `pronunciation`,
   `technical_depth`, `behavioral_depth`.
 - **Memory & progress** (§49, §93, §100): the prompt architecture already accepts
-  *relevant* memory (`relevantMemory`) and only relevant context is passed — never
+  *relevant* memory (`relevantMemory`) and only relevant context is passed - never
   the whole DB (§93). Memory persistence, the Progress dashboard, and Flashcards
   are **Planned**.
 
@@ -267,18 +267,18 @@ src/infrastructure  ai · db · audio · speech · file-storage
   fallback). Selection via `getAIProvider()` (`provider.ts`), which uses
   `resolveAiProvider()` (`src/lib/env.ts`).
 - **Structured output** (`src/infrastructure/ai/structured.ts`, §65): `runStructured()`
-  loops — normal generation → retry → schema-repair prompt (feeds the Zod error
+  loops - normal generation → retry → schema-repair prompt (feeds the Zod error
   back) → throws `AIStructuredError`. Callers catch and preserve user work.
 - **Prompt composition** (`src/infrastructure/ai/prompt/*`, §67, §68): every
-  prompt is assembled from discrete sections — **Global AI Rules + Role Rules +
-  User Context + Relevant Memory + Task + Output Contract** — never one giant
+  prompt is assembled from discrete sections - **Global AI Rules + Role Rules +
+  User Context + Relevant Memory + Task + Output Contract** - never one giant
   string, and global rules are never duplicated per role.
 - **Persistence** (`src/infrastructure/db/*`, §58): SQLite via Drizzle. Tables:
   `profiles`, `practice_sessions`, `practice_attempts`, `feedback_items`. The
   client auto-runs migrations from `./drizzle` on boot and enables WAL +
   `foreign_keys`. Access via `practiceRepository`.
 - **Observability** (`src/lib/logger.ts`, §92): `logAiCall` records `role`,
-  `promptVersion`, `provider`, `latencyMs`, `ok`, and `schemaError` — metadata
+  `promptVersion`, `provider`, `latencyMs`, `ok`, and `schemaError` - metadata
   only, never content.
 
 ### 6.1 Configuration
@@ -299,7 +299,7 @@ src/infrastructure  ai · db · audio · speech · file-storage
 These are the checks the product must always pass. Items already verified in code
 are marked ✅.
 
-1. **No rewrite before attempt 3.** Attempts 1–2 never return a filled
+1. **No rewrite before attempt 3.** Attempts 1-2 never return a filled
    `improvedVersion`, even if the model produces one. ✅ Enforced by
    `enforceCoachingPolicy()`; covered by `coaching-stage.test.ts`.
 2. **The app, not the AI, owns the workflow.** Attempt number, stage, and
@@ -310,10 +310,10 @@ are marked ✅.
 4. **User work is never lost.** The answer is persisted before the AI call; AI
    failure yields a saved attempt and a graceful message. ✅
 5. **All structured AI output is schema-valid.** Invalid output is retried,
-   repaired, or rejected — never trusted. ✅ (`runStructured` + Zod).
+   repaired, or rejected - never trusted. ✅ (`runStructured` + Zod).
 6. **Thinking and communication feedback are kept distinct** in Vietnamese
    coaching. ✅ (schema `category` enum + role rules).
-7. **Voice is preserved on rewrite** (~80–90% of original wording). Enforced by
+7. **Voice is preserved on rewrite** (~80-90% of original wording). Enforced by
    prompt rules (global + role).
 8. **The AI never behaves as a generic chatbot** and never invents the user's
    background. Enforced by `GLOBAL_AI_RULES`.
@@ -329,17 +329,17 @@ are marked ✅.
 
 `src/infrastructure/db/schema.ts`. Timestamps are ISO-8601 strings.
 
-- **`profiles`** — `id`, `current_role`, `years_experience`, `target_role`,
+- **`profiles`** - `id`, `current_role`, `years_experience`, `target_role`,
   `target_markets` (JSON), `primary_skills` (JSON), `secondary_skills` (JSON),
   `english_goal`, `transcript_mode` (default `after`), `created_at`,
   `updated_at`.
-- **`practice_sessions`** — `id`, `mode` (`vietnamese`\|`english`), `goal`,
+- **`practice_sessions`** - `id`, `mode` (`vietnamese`\|`english`), `goal`,
   `exercise_type`, `prompt`, `question_id`, `status`
   (`active`\|`completed`\|`abandoned`), `started_at`, `completed_at`.
-- **`practice_attempts`** — `id`, `session_id` (FK, cascade), `attempt_number`,
+- **`practice_attempts`** - `id`, `session_id` (FK, cascade), `attempt_number`,
   `text_answer`, `audio_recording_id`, `transcript_id`, `feedback_id`,
   `created_at`.
-- **`feedback_items`** — `id`, `attempt_id` (FK, cascade), `role`,
+- **`feedback_items`** - `id`, `attempt_id` (FK, cascade), `role`,
   `prompt_version`, `stage`, `payload` (JSON of the validated feedback object),
   `created_at`.
 
@@ -353,7 +353,7 @@ are marked ✅.
 | Phase | Scope | Status |
 | ----- | ----- | ------ |
 | **0** | Foundations: layered architecture, env, DB + migrations, AI provider abstraction, mock fallback, prompt composition, taxonomy, logging. | ✅ Built |
-| **1** | Layer 1 — Vietnamese staged coaching loop (Think Clearly): exercises, coach role, staged policy + guardrail, session recovery, Dashboard. | ✅ Built |
-| **2** | Layer 2 — English voice practice (Speak Naturally): recording, transcription, spoken-English + pronunciation analysis, transcript modes. | ⬜ Planned (interfaces ready) |
-| **3** | Layer 3 — Interview (Perform Under Pressure): individual questions, question bank, then full simulation. | ⬜ Planned (taxonomy ready) |
+| **1** | Layer 1 - Vietnamese staged coaching loop (Think Clearly): exercises, coach role, staged policy + guardrail, session recovery, Dashboard. | ✅ Built |
+| **2** | Layer 2 - English voice practice (Speak Naturally): recording, transcription, spoken-English + pronunciation analysis, transcript modes. | ⬜ Planned (interfaces ready) |
+| **3** | Layer 3 - Interview (Perform Under Pressure): individual questions, question bank, then full simulation. | ⬜ Planned (taxonomy ready) |
 | **3+** | Memory, Progress dashboard, Flashcards, Profile UI. | ⬜ Planned |

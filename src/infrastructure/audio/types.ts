@@ -1,6 +1,6 @@
 /**
  * Audio storage abstraction. Recordings are stored as local files (§8), never
- * as large SQLite blobs — SQLite holds only metadata that points here.
+ * as large SQLite blobs - SQLite holds only metadata that points here.
  */
 export interface StoredAudio {
   id: string;

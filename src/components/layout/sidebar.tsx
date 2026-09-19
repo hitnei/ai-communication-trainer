@@ -9,7 +9,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r bg-card/40 md:flex md:flex-col">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r bg-card/40 md:flex md:flex-col">
       <div className="flex h-14 items-center gap-2 border-b px-5">
         <div className="size-6 rounded-md bg-primary" aria-hidden />
         <span className="text-sm font-semibold tracking-tight">

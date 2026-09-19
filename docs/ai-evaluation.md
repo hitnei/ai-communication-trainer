@@ -2,7 +2,7 @@
 
 How we test that the AI behaves correctly and how we keep it behaving correctly
 as prompts and providers change. The goal is not to score model "quality" in the
-abstract — it is to protect the **product's acceptance criteria** and business
+abstract - it is to protect the **product's acceptance criteria** and business
 rules (staged coaching, thinking-vs-communication separation, structured-output
 validity) against prompt drift and provider swaps.
 
@@ -41,7 +41,7 @@ rules.** The application layer decides the attempt number and stage
 `enforceCoachingPolicy()`
 (`src/domain/practice/coaching-stage.ts`) strips `improvedVersion` regardless of
 what the model returns. So most acceptance criteria can be proven with fast,
-offline, deterministic tests — no live vendor required.
+offline, deterministic tests - no live vendor required.
 
 ---
 
@@ -52,7 +52,7 @@ category exercises a different guarantee.
 
 | Category | What it proves | Provider used |
 | --- | --- | --- |
-| **Policy / staged coaching** | Attempt 1–2 never leak a full rewrite; attempt 3+ may | Mock (deterministic) |
+| **Policy / staged coaching** | Attempt 1-2 never leak a full rewrite; attempt 3+ may | Mock (deterministic) |
 | **Schema validity** | Model output parses against the Zod contract; malformed output is repaired or fails safely | Mock + fault-injected |
 | **Taxonomy correctness** | `issues[].category` and `issues[].code` come from the correct code sets, and thinking vs communication are not conflated | Mock / Gemini |
 | **Golden behavior** (§90) | Specific fillers/phrases are handled the way the product spec requires | Mock (pinned), Gemini (advisory) |
@@ -61,9 +61,9 @@ category exercises a different guarantee.
 
 The relevant code sets live in `src/domain/feedback/taxonomy.ts`:
 
-- `THINKING_CODES` — `unclear_idea`, `missing_point`, `weak_logic`,
+- `THINKING_CODES` - `unclear_idea`, `missing_point`, `weak_logic`,
   `poor_structure`
-- `COMMUNICATION_CODES` — `too_long`, `repetitive`, `main_point_late`,
+- `COMMUNICATION_CODES` - `too_long`, `repetitive`, `main_point_late`,
   `unclear`, `incomplete`
 - Skill/progress dimensions: `SKILL_DIMENSIONS` (used by progress aggregation,
   Planned).
@@ -112,14 +112,14 @@ we want a red test.
 - **Why golden:** over-correction destroys trust faster than under-correction.
   True-negatives are as important as true-positives.
 
-### 3.3 `"basically"` — once vs. repeated (memory)
+### 3.3 `"basically"` - once vs. repeated (memory)
 
 - **Category:** filler usage + **memory** (Planned, Phase 3).
-- **Case A — used once:** treat as a single, low-severity `filler` observation.
+- **Case A - used once:** treat as a single, low-severity `filler` observation.
   **Do not** persist it to long-term memory or escalate it. One "basically" is
   not a pattern.
-- **Case B — repeated across attempts/sessions:** the filler becomes a
-  **candidate for memory** — i.e. a recurring pattern worth remembering and
+- **Case B - repeated across attempts/sessions:** the filler becomes a
+  **candidate for memory** - i.e. a recurring pattern worth remembering and
   surfacing (`filler_usage` skill dimension). The distinction is *frequency /
   recurrence*, not the word itself.
 - **Why golden:** it pins the rule that memory is for *patterns*, not one-off
@@ -159,7 +159,7 @@ Gemini.
    npm test          # vitest, include: src/**/*.test.ts
    ```
    These never call a network. If `coaching-stage.test.ts` or
-   `vietnamese-coach-service.test.ts` go red, the prompt/policy contract broke —
+   `vietnamese-coach-service.test.ts` go red, the prompt/policy contract broke -
    stop and fix before touching the model.
 
 2. **Bump the prompt version** in the role module (see §5). Never edit a prompt's
@@ -243,7 +243,7 @@ output.
   `Record<string, (prompt: string) => unknown>` keyed by **role** (matching
   `AICallMeta.role`). Today it contains one entry: `"vietnamese-coach"`.
 - Crucially, `generateStructured` on the mock **routes the fixture through
-  `runStructured()`** — the same Zod validation + repair loop the real provider
+  `runStructured()`** - the same Zod validation + repair loop the real provider
   uses. A fixture that does not satisfy `vietnameseCoachFeedbackSchema` will fail
   in exactly the same way real output would.
 - By design the fixture **always returns an `improvedVersion`**, even though a
@@ -337,7 +337,7 @@ describe("golden cases (mock, deterministic)", () => {
 
 To test the `runStructured()` failure ladder (retry → schema-repair → throw
 `AIStructuredError`, §65), pass a hand-rolled provider or `generate` function
-that returns malformed JSON, then invalid-shape JSON, then valid — asserting the
+that returns malformed JSON, then invalid-shape JSON, then valid - asserting the
 loop recovers, and asserting it throws after three failures. This does not need
 the mock fixtures; it targets `src/infrastructure/ai/structured.ts` directly.
 
@@ -367,7 +367,7 @@ return 200.
 - Rules are enforced in code, so most evaluation is **deterministic and offline**.
 - The mock provider (`src/infrastructure/ai/mock-provider.ts`) is the fixture
   store and shares the real validation loop.
-- Golden cases (§90) pin specific behaviors — correct `"you know what my mean"`,
+- Golden cases (§90) pin specific behaviors - correct `"you know what my mean"`,
   leave `"yeah, exactly"` alone, and only remember `"basically"` when it recurs.
 - Every prompt change bumps `promptVersion`, which is logged and persisted, so
   regressions are attributable and comparable.

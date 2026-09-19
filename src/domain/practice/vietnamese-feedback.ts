@@ -6,7 +6,7 @@ import {
 
 /**
  * Structured output contract for the Vietnamese Coach (§64). Every AI response
- * is validated against this — unvalidated output is never trusted.
+ * is validated against this - unvalidated output is never trusted.
  *
  * Vietnamese coaching separates THINKING problems from COMMUNICATION problems
  * (§19) and must NOT conflate language issues with thinking issues.
@@ -23,9 +23,9 @@ export const vietnameseCoachFeedbackSchema = z.object({
   summary: z.string().min(1),
   strengths: z.array(z.string()).default([]),
   issues: z.array(vietnameseIssueSchema).default([]),
-  /** Reflection questions — the core of attempt 1 (§18, §69). */
+  /** Reflection questions - the core of attempt 1 (§18, §69). */
   reflectionQuestions: z.array(z.string()).default([]),
-  /** Direction / structure hints — allowed from attempt 2 (§69). */
+  /** Direction / structure hints - allowed from attempt 2 (§69). */
   suggestions: z.array(z.string()).default([]),
   /**
    * Full rewritten answer. Only permitted from attempt 3+. The application

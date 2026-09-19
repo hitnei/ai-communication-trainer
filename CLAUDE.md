@@ -1,13 +1,13 @@
 @AGENTS.md
 
-# AI Communication & Interview Trainer — engineering rules
+# AI Communication & Interview Trainer - engineering rules
 
 This is a **local-first personal communication trainer**, not a generic chatbot. The core loop is: user communicates → AI analyzes → root cause → retry → compare → remember → adapt. See `docs/` for full specs.
 
 ## Non-negotiable rules
-- **The application controls the workflow; the AI only provides intelligence.** Attempt numbers, coaching stage, whether an improved version may be shown, and session completion are decided in the application/domain layer — never by the AI. See `src/domain/practice/coaching-stage.ts` and `src/application/practice/vietnamese-coach-service.ts`.
+- **The application controls the workflow; the AI only provides intelligence.** Attempt numbers, coaching stage, whether an improved version may be shown, and session completion are decided in the application/domain layer - never by the AI. See `src/domain/practice/coaching-stage.ts` and `src/application/practice/vietnamese-coach-service.ts`.
 - **Staged Vietnamese coaching (critical):** attempt 1 = diagnose (no rewrite), attempt 2 = guide (no rewrite), attempt 3+ = improve (rewrite allowed). `enforceCoachingPolicy()` strips the rewrite regardless of AI output.
-- **Preserve the user's voice** (~80–90%) and sound human, not robotic. Distinguish spoken vs written English; don't flag natural fillers automatically.
+- **Preserve the user's voice** (~80-90%) and sound human, not robotic. Distinguish spoken vs written English; don't flag natural fillers automatically.
 - **All AI output is Zod-validated** (`generateStructured` → `runStructured` → retry → schema-repair → `AIStructuredError`). Never trust unvalidated AI output. Never lose user work on AI failure.
 
 ## Layering (dependency direction)

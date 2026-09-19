@@ -1,5 +1,5 @@
 /**
- * Staged coaching rules — a CRITICAL business rule (§18, §69, §103).
+ * Staged coaching rules - a CRITICAL business rule (§18, §69, §103).
  *
  * The APPLICATION controls the workflow; the AI only provides intelligence
  * (Rule 3). This pure module encodes what each attempt is *allowed* to reveal,

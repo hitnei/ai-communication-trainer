@@ -69,7 +69,7 @@ export async function submitVietnameseAttempt(input: {
   const session = practiceRepository.getSession(input.sessionId);
   if (!session) throw new Error(`Session not found: ${input.sessionId}`);
 
-  // Application decides the attempt number and stage — not the AI.
+  // Application decides the attempt number and stage - not the AI.
   const attemptNumber = practiceRepository.countAttempts(input.sessionId) + 1;
   const policy = coachingPolicyForAttempt(attemptNumber);
 
@@ -133,7 +133,7 @@ export async function submitVietnameseAttempt(input: {
   }
 }
 
-/** "I'm Satisfied" — user controls completion (§18). */
+/** "I'm Satisfied" - user controls completion (§18). */
 export function completeVietnameseSession(sessionId: string) {
   practiceRepository.setSessionStatus(sessionId, "completed");
 }

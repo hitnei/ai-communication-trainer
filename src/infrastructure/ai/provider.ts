@@ -9,7 +9,7 @@ let cached: AIProvider | null = null;
 
 /**
  * Single access point for the AI provider. Selects Gemini when a key is present,
- * otherwise the mock — decided here so no other module knows which is active.
+ * otherwise the mock - decided here so no other module knows which is active.
  */
 export function getAIProvider(): AIProvider {
   if (cached) return cached;

@@ -10,7 +10,7 @@ The product is local-first: no accounts, no cloud sync. The UI language is Engli
 
 Global navigation lives in a persistent left sidebar, defined once in `src/components/layout/nav.ts` (`NAV_ITEMS`) and rendered by `src/components/layout/sidebar.tsx`. The sidebar is desktop-first: it is hidden below the `md` breakpoint (`hidden ... md:flex`).
 
-The overall shell is in `src/app/layout.tsx`: sidebar + a scrollable `<main>` whose content is centered in a `max-w-4xl` column. This constrained reading width is intentional — the app is a focused training tool, not a dashboard-dense console.
+The overall shell is in `src/app/layout.tsx`: sidebar + a scrollable `<main>` whose content is centered in a `max-w-4xl` column. This constrained reading width is intentional - the app is a focused training tool, not a dashboard-dense console.
 
 ### Sections
 
@@ -19,7 +19,7 @@ The overall shell is in `src/app/layout.tsx`: sidebar + a scrollable `<main>` wh
 | Dashboard | `/` | `true` | Implemented (`src/app/page.tsx`) |
 | Practice | `/practice` | `true` | Redirects to `/practice/vietnamese` (`src/app/practice/page.tsx`) |
 | ↳ Vietnamese | `/practice/vietnamese` | `true` | Fully implemented |
-| ↳ English | `/practice/english` | `true` (route) | Placeholder screen — voice loop is **Planned (Phase 2)** |
+| ↳ English | `/practice/english` | `true` (route) | Placeholder screen - voice loop is **Planned (Phase 2)** |
 | Interview | `/interview` | `false` | **Planned** |
 | ↳ Individual | `/interview/individual` | `false` | **Planned** |
 | ↳ Full Simulation | `/interview/simulation` | `false` | **Planned** |
@@ -33,7 +33,7 @@ The overall shell is in `src/app/layout.tsx`: sidebar + a scrollable `<main>` wh
 - **Active state**: Dashboard is active only on exact `/`; every other item is active when the path *starts with* its `href` (`pathname.startsWith(item.href)`).
 - **Sub-items**: children (Vietnamese / English) render only when the parent is active and available, indented under a left border.
 - **Unavailable sections**: rendered at `opacity-50`, `cursor-not-allowed`, `href="#"`, `aria-disabled`, and tagged with a small uppercase **`Soon`** label on the right. They are visible on purpose so the user can see the product's shape, but they cannot be entered.
-- **Footer**: the sidebar foot shows `Local-first · Phase 1` — a quiet honesty cue about scope.
+- **Footer**: the sidebar foot shows `Local-first · Phase 1` - a quiet honesty cue about scope.
 
 The sidebar header shows a solid primary-color square (placeholder mark, `aria-hidden`) next to "Communication Trainer". There is no separate logo asset yet.
 
@@ -48,11 +48,11 @@ The visual system is defined entirely in `src/app/globals.css` (Tailwind v4, CSS
 ### Principles
 
 - **Calm and neutral.** A near-white slate background (`--background: oklch(0.99 0.002 260)`) with slate-tinted foreground. Surfaces are plain white cards with a soft `shadow-sm` and `rounded-xl` corners.
-- **One accent.** A single calm indigo (`--primary: oklch(0.52 0.16 265)`) carries all emphasis — active nav, primary buttons, focus ring, the "improved version" highlight. No secondary brand colors.
+- **One accent.** A single calm indigo (`--primary: oklch(0.52 0.16 265)`) carries all emphasis - active nav, primary buttons, focus ring, the "improved version" highlight. No secondary brand colors.
 - **Semantic-only color.** `success` (green), `warning` (amber), `destructive` (red) exist for meaning, never decoration. Feedback categories reuse these: *thinking* issues use `warning`, *communication* issues use `secondary`/muted.
 - **No gamification.** There are no points, streaks, levels, XP bars, confetti, mascots, or celebratory sound. Completion is acknowledged with one restrained success card, not a reward animation. Progress is framed as *insight*, not score.
 - **Typography.** Geist Sans (body/UI) and Geist Mono, loaded in `layout.tsx`. Headings are `font-semibold tracking-tight`; secondary text uses `text-muted-foreground`. Section labels are small uppercase tracked labels.
-- **Dark mode** tokens are fully defined (`.dark` block) but there is no theme toggle in the UI yet — **Planned**.
+- **Dark mode** tokens are fully defined (`.dark` block) but there is no theme toggle in the UI yet - **Planned**.
 
 ### Component primitives (`src/components/ui`)
 
@@ -68,7 +68,7 @@ Icons throughout are from `lucide-react` (e.g. `Send`, `RotateCcw`, `CheckCircle
 
 ---
 
-## 3. Vietnamese practice — screens and flow
+## 3. Vietnamese practice - screens and flow
 
 The Vietnamese practice experience is the one fully-built loop. It lives under `src/features/practice/vietnamese/` and is routed by `src/app/practice/vietnamese/page.tsx`.
 
@@ -83,12 +83,12 @@ The page is `export const dynamic = "force-dynamic"` so session state is always 
 
 A calm two-step setup, each step in its own card:
 
-1. **"1. Choose an exercise"** — pill buttons for the eight exercise types from `EXERCISE_LABELS` (`src/domain/practice/types.ts`): Explain a problem, Tell a story, Give an opinion, Explain a technical concept, Explain an experience, Interview answer, Casual conversation, Rewrite a messy thought. The selected pill is filled with the indigo accent; others are muted.
-2. **"2. Your prompt"** — a Vietnamese seed prompt from `VIETNAMESE_PROMPTS` shown in an editable `Textarea`. A **"Change prompt"** ghost button (shuffle icon) swaps to another seed for the same type; the user may also freely edit the text.
+1. **"1. Choose an exercise"** - pill buttons for the eight exercise types from `EXERCISE_LABELS` (`src/domain/practice/types.ts`): Explain a problem, Tell a story, Give an opinion, Explain a technical concept, Explain an experience, Interview answer, Casual conversation, Rewrite a messy thought. The selected pill is filled with the indigo accent; others are muted.
+2. **"2. Your prompt"** - a Vietnamese seed prompt from `VIETNAMESE_PROMPTS` shown in an editable `Textarea`. A **"Change prompt"** ghost button (shuffle icon) swaps to another seed for the same type; the user may also freely edit the text.
 
 The intro copy sets expectations for staged coaching up front:
 
-> Turn messy thoughts into clear, structured communication. Answer in Vietnamese — the coach diagnoses first, and only shows a rewrite once you've worked on it yourself.
+> Turn messy thoughts into clear, structured communication. Answer in Vietnamese - the coach diagnoses first, and only shows a rewrite once you've worked on it yourself.
 
 The **"Start practice"** button calls `startSessionAction`, then navigates to `?session=<id>`. The input placeholder for answers is Vietnamese: *"Viết câu trả lời của bạn bằng tiếng Việt…"*.
 
@@ -100,7 +100,7 @@ A single vertical column, top to bottom:
 - **Attempt history**: each prior attempt rendered as `Attempt N` + a stage `Badge` + the user's answer card + either its feedback card or an error card (see §5).
 - **Composer / completion card** at the bottom: either the answer composer (still active) or the "Session complete" card.
 
-The client component seeds its state from server-provided `initialAttempts` (`AttemptWithFeedback[]`), so a reload rebuilds the full history — this is the backbone of session recovery (§7).
+The client component seeds its state from server-provided `initialAttempts` (`AttemptWithFeedback[]`), so a reload rebuilds the full history - this is the backbone of session recovery (§7).
 
 ---
 
@@ -118,26 +118,26 @@ Staged coaching is the product's defining behavior. The rule is a pure domain fu
 
 Before the user submits, the composer card shows the upcoming stage as a `Badge` and a plain-language explanation from `STAGE_HELP` in `vietnamese-practice.tsx`:
 
-- **Diagnose** — *"First attempt — the coach will point out the real problem and ask you questions, but won't rewrite it for you yet."*
-- **Guide** — *"Second attempt — you'll get direction and structure hints, still no full rewrite."*
-- **Improve** — *"You've put in the work — the coach may now show a more natural version, keeping your voice."*
+- **Diagnose** - *"First attempt - the coach will point out the real problem and ask you questions, but won't rewrite it for you yet."*
+- **Guide** - *"Second attempt - you'll get direction and structure hints, still no full rewrite."*
+- **Improve** - *"You've put in the work - the coach may now show a more natural version, keeping your voice."*
 
-The client computes the next stage locally (`coachingPolicyForAttempt(entries.length + 1)`) so the label is correct before any round-trip. This is display only — the **server independently re-derives the stage** from the persisted attempt count and enforces it.
+The client computes the next stage locally (`coachingPolicyForAttempt(entries.length + 1)`) so the label is correct before any round-trip. This is display only - the **server independently re-derives the stage** from the persisted attempt count and enforces it.
 
 ### The guardrail (why the UI can trust the stage)
 
-Even if the model returns an `improvedVersion` too early, `enforceCoachingPolicy()` strips it server-side before persistence whenever `canRevealImprovedVersion` is false. The feedback renderer (`feedback-view.tsx`) then simply shows the "A more natural way to say it" block *if and only if* `feedback.improvedVersion` is present. No stage logic lives in the view — it renders whatever survived the guardrail.
+Even if the model returns an `improvedVersion` too early, `enforceCoachingPolicy()` strips it server-side before persistence whenever `canRevealImprovedVersion` is false. The feedback renderer (`feedback-view.tsx`) then simply shows the "A more natural way to say it" block *if and only if* `feedback.improvedVersion` is present. No stage logic lives in the view - it renders whatever survived the guardrail.
 
 ### Feedback presentation (`feedback-view.tsx`)
 
 Each feedback card is titled **"What I noticed"** and renders, in order, only the sections that have content:
 
-1. **Summary** — one plain paragraph.
-2. **Strengths** — green-check list (optional).
-3. **What to work on** — the **top 2–3 issues only** (`feedback.issues.slice(0, 3)`), each in a bordered tile with a category badge. *Thinking* problems get a `warning` badge; *communication* problems get a `secondary` badge — the taxonomy visibly separates the two (§19).
-4. **Think about this** — reflection questions (the heart of attempt 1).
-5. **A direction to try** — suggestions (from attempt 2).
-6. **A more natural way to say it** — the rewrite, in an accented indigo box with a `Sparkles` icon (attempt 3+ only).
+1. **Summary** - one plain paragraph.
+2. **Strengths** - green-check list (optional).
+3. **What to work on** - the **top 2-3 issues only** (`feedback.issues.slice(0, 3)`), each in a bordered tile with a category badge. *Thinking* problems get a `warning` badge; *communication* problems get a `secondary` badge - the taxonomy visibly separates the two (§19).
+4. **Think about this** - reflection questions (the heart of attempt 1).
+5. **A direction to try** - suggestions (from attempt 2).
+6. **A more natural way to say it** - the rewrite, in an accented indigo box with a `Sparkles` icon (attempt 3+ only).
 
 Capping issues at three is deliberate: avoid overwhelming the user (§24).
 
@@ -145,13 +145,13 @@ Capping issues at three is deliberate: avoid overwhelming the user (§24).
 
 The user, not the app, decides when an answer is good enough. After the first attempt the composer offers three actions:
 
-- **Try again** (primary, `Send`) — submit the next attempt.
-- **Keep improving** (`outline`, `RotateCcw`) — scrolls/focuses the composer without submitting.
-- **I'm satisfied** (`ghost`, `CheckCircle2`) — calls `markSatisfiedAction`, marking the session `completed`.
+- **Try again** (primary, `Send`) - submit the next attempt.
+- **Keep improving** (`outline`, `RotateCcw`) - scrolls/focuses the composer without submitting.
+- **I'm satisfied** (`ghost`, `CheckCircle2`) - calls `markSatisfiedAction`, marking the session `completed`.
 
 On completion the composer is replaced by a single restrained success card:
 
-> **Session complete** — Nice work. You decided when this was good enough.
+> **Session complete** - Nice work. You decided when this was good enough.
 
 There is no scoring, no "you passed", no next-level prompt.
 
@@ -166,7 +166,7 @@ The implemented Vietnamese loop covers these states; others are specified here a
 | **Loading (initial)** | Server components (`force-dynamic`) | State is read on the server and streamed; no client loading screen for first paint. |
 | **Processing (submit)** | `vietnamese-practice.tsx` via `useTransition` | While `pending`, the `Textarea` and buttons are disabled and the primary button shows `Spinner` + *"Thinking about your answer…"*. Start screen shows *"Starting…"*. |
 | **Success** | Feedback card appears in history; completion card on satisfy | Restrained, no celebration. |
-| **Error (AI failure)** | `submitAttemptAction` → `SubmitAttemptResult.ok === false` | The attempt is appended with `failed: true` and rendered as a `destructive`-tinted card with `AlertTriangle`: *"Something went wrong while analyzing this answer. Your work was saved — you can try submitting again."* A short inline message is also set. **The user's text is never lost** — it is persisted before the AI call. |
+| **Error (AI failure)** | `submitAttemptAction` → `SubmitAttemptResult.ok === false` | The attempt is appended with `failed: true` and rendered as a `destructive`-tinted card with `AlertTriangle`: *"Something went wrong while analyzing this answer. Your work was saved - you can try submitting again."* A short inline message is also set. **The user's text is never lost** - it is persisted before the AI call. |
 | **Error (start failure)** | `start()` catch in `start-practice.tsx` | Inline: *"Couldn't start the session. Please try again."* |
 | **Empty (no attempts)** | Practice screen with `entries.length === 0` | History section is empty; composer title reads *"Your answer"* and the button reads *"Submit"* instead of *"Try again"*. |
 | **Empty (dashboard / no active session)** | `src/app/page.tsx` | No "unfinished session" card is shown; the user sees only the recommended-practice card. |
@@ -179,7 +179,7 @@ Only *known* AI errors (`AIStructuredError`, `AIProviderError`) are converted to
 
 ---
 
-## 6. Copy guidelines — human, not robotic (§76, §97)
+## 6. Copy guidelines - human, not robotic (§76, §97)
 
 The product should sound like a thoughtful human coach, never like a system dialog. This is visible in the shipped strings and should be maintained everywhere.
 
@@ -189,7 +189,7 @@ The product should sound like a thoughtful human coach, never like a system dial
 - Frame states as ongoing thought: **"Thinking about your answer…"**, not "Loading" or "Processing request".
 - Acknowledge effort and agency: **"You've put in the work…"**, **"You decided when this was good enough."**
 - Explain *why* something matters (Dashboard: *"Getting to your main point early is the highest-value habit for interviews and standups."*).
-- Reassure on failure with concrete facts: **"Your work was saved — you can try submitting again."**
+- Reassure on failure with concrete facts: **"Your work was saved - you can try submitting again."**
 - Keep it short. One idea per line. Prefer plain verbs.
 
 **Don't:**
@@ -197,7 +197,7 @@ The product should sound like a thoughtful human coach, never like a system dial
 - No error codes, stack traces, or model/provider names in user-facing copy.
 - No gamified praise ("Great job!! 🎉"), no guilt, no urgency.
 - No jargon from the architecture (no "structured output", "schema", "provider").
-- Avoid generic system phrasing ("An error occurred", "Invalid input") — prefer specific, kind alternatives ("Write something before submitting.").
+- Avoid generic system phrasing ("An error occurred", "Invalid input") - prefer specific, kind alternatives ("Write something before submitting.").
 
 **Positioning line (Dashboard, "The training loop"):**
 
@@ -211,20 +211,20 @@ That last sentence is the north star for tone: the app coaches deliberately; it 
 
 Recovery works at two levels, both already implemented.
 
-1. **Full-history rebuild.** The practice route is `force-dynamic` and reads session state from SQLite (`getSessionState`). Reopening `?session=<id>` — after a reload, a crash, or days later — rebuilds every attempt, its stage badge, and its feedback exactly, because `VietnamesePractice` seeds from server `initialAttempts`.
+1. **Full-history rebuild.** The practice route is `force-dynamic` and reads session state from SQLite (`getSessionState`). Reopening `?session=<id>` - after a reload, a crash, or days later - rebuilds every attempt, its stage badge, and its feedback exactly, because `VietnamesePractice` seeds from server `initialAttempts`.
 2. **"You have an unfinished session" on the Dashboard.** On launch, `src/app/page.tsx` calls `getActiveVietnameseSession()` (→ `practiceRepository.getActiveSession("vietnamese")`). If an `active` session exists, an accented card appears at the top:
 
-   > **You have an unfinished session** — [prompt excerpt, `line-clamp-2`] — **Continue →**
+   > **You have an unfinished session** - [prompt excerpt, `line-clamp-2`] - **Continue →**
 
    The Continue button links straight back to `?session=<id>`.
 
-Sessions carry an explicit `status` (`active` | `completed` | `abandoned`, from `SessionStatus`). "I'm satisfied" sets `completed`; `abandonVietnameseSession` / `discardSessionAction` set `abandoned` (server action exists; there is no discard button in the UI yet — **Planned**). Only `active` sessions are surfaced for recovery.
+Sessions carry an explicit `status` (`active` | `completed` | `abandoned`, from `SessionStatus`). "I'm satisfied" sets `completed`; `abandonVietnameseSession` / `discardSessionAction` set `abandoned` (server action exists; there is no discard button in the UI yet - **Planned**). Only `active` sessions are surfaced for recovery.
 
 Because answers are persisted *before* the AI call, recovery is lossless even if the app died mid-analysis: the attempt reappears (as feedback if it succeeded, or re-submittable if it did not).
 
 ---
 
-## 8. Transcript modes — Planned (Phase 2)
+## 8. Transcript modes - Planned (Phase 2)
 
 Voice practice is **not yet built**. The English practice route (`src/app/practice/english/page.tsx`) is a deliberate placeholder that states the plan honestly:
 
@@ -251,5 +251,5 @@ Until Phase 2, no transcript UI, recording controls, or waveform components exis
 - **Focus** is always visible: primitives include a `ring-2 ring-ring` focus-visible style; the global `*` rule sets an outline color.
 - **Disabled semantics**: unavailable nav uses `aria-disabled`; buttons disable during `pending`.
 - **Keyboard**: standard button/link/textarea semantics; the "Keep improving" action programmatically focuses and scrolls the composer into view.
-- **Responsive**: the sidebar is desktop-first and hidden under `md`. A mobile navigation (drawer/top bar) is **Planned** — on small screens today the main content is reachable but the sidebar is not shown.
-- **Color contrast**: the slate/indigo palette is chosen for calm legibility; semantic colors carry an icon *and* text label (never color alone) — e.g. issue category badges pair a word with the color.
+- **Responsive**: the sidebar is desktop-first and hidden under `md`. A mobile navigation (drawer/top bar) is **Planned** - on small screens today the main content is reachable but the sidebar is not shown.
+- **Color contrast**: the slate/indigo palette is chosen for calm legibility; semantic colors carry an icon *and* text label (never color alone) - e.g. issue category badges pair a word with the color.

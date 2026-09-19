@@ -17,7 +17,7 @@ export interface GenerateTextParams {
 export interface GenerateStructuredParams<T> {
   system?: string;
   prompt: string;
-  /** Zod schema — the single source of truth for AI output shape (§64). */
+  /** Zod schema - the single source of truth for AI output shape (§64). */
   schema: ZodType<T>;
   /** Human-readable name used in repair prompts. */
   schemaName?: string;
@@ -27,7 +27,7 @@ export interface GenerateStructuredParams<T> {
 
 /**
  * The one interface the domain/application layers depend on. Adding a new AI
- * vendor means implementing this — no product logic changes (§6).
+ * vendor means implementing this - no product logic changes (§6).
  */
 export interface AIProvider {
   readonly name: string;

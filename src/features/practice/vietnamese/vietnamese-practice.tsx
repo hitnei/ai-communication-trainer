@@ -29,11 +29,11 @@ interface LoopEntry {
 
 const STAGE_HELP: Record<CoachingPolicy["stage"], string> = {
   diagnose:
-    "First attempt — the coach will point out the real problem and ask you questions, but won't rewrite it for you yet.",
+    "First attempt - the coach will point out the real problem and ask you questions, but won't rewrite it for you yet.",
   guide:
-    "Second attempt — you'll get direction and structure hints, still no full rewrite.",
+    "Second attempt - you'll get direction and structure hints, still no full rewrite.",
   improve:
-    "You've put in the work — the coach may now show a more natural version, keeping your voice.",
+    "You've put in the work - the coach may now show a more natural version, keeping your voice.",
 };
 
 export function VietnamesePractice({
@@ -117,7 +117,7 @@ export function VietnamesePractice({
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
+      <div className="space-y-2">
         <button
           onClick={() => router.push("/practice/vietnamese")}
           className="text-sm text-muted-foreground hover:text-foreground"
@@ -127,12 +127,15 @@ export function VietnamesePractice({
         <h1 className="text-2xl font-semibold tracking-tight">
           Vietnamese Practice
         </h1>
-        <Card className="bg-muted/30">
-          <CardContent className="pt-6 text-sm leading-relaxed">
-            {session.prompt}
-          </CardContent>
-        </Card>
-      </header>
+      </div>
+
+      {/* Keep the prompt pinned so it's easy to review while scrolling. */}
+      <div className="sticky top-0 z-20 -mx-6 border-b bg-background/90 px-6 py-3 backdrop-blur-sm">
+        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Prompt
+        </p>
+        <p className="text-sm leading-relaxed">{session.prompt}</p>
+      </div>
 
       {/* Attempt history + feedback */}
       <div className="space-y-5">
@@ -156,7 +159,7 @@ export function VietnamesePractice({
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                 <span>
                   Something went wrong while analyzing this answer. Your work was
-                  saved — you can try submitting again.
+                  saved - you can try submitting again.
                 </span>
               </div>
             ) : (

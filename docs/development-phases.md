@@ -6,7 +6,7 @@ and never replaces a core business rule with simplified behavior (see
 `CLAUDE.md` / `AGENTS.md`).
 
 Phase 0 (Foundation) and Phase 1 (Vietnamese Coach) are **complete and
-verified**. Phases 2–9 are **planned**; their scope below reflects the
+verified**. Phases 2-9 are **planned**; their scope below reflects the
 infrastructure interfaces, schema columns, feedback codes, and skill dimensions
 that already exist in the codebase as seams for the work, but the product logic
 for those phases is **not yet built**.
@@ -33,7 +33,7 @@ Every phase follows the same loop:
 1. **Read the spec.** Confirm scope against `docs/product-spec.md`,
    `docs/solution-design.md`, `docs/ux-spec.md`, and the architecture docs.
 2. **Model the domain first.** Add pure types, Zod schemas, and rules under
-   `src/domain` — no I/O, no vendor code. New AI output gets a Zod contract
+   `src/domain` - no I/O, no vendor code. New AI output gets a Zod contract
    before any provider call is written.
 3. **Extend infrastructure behind existing interfaces.** Implement against
    `AIProvider`, `AudioStorage`, `SpeechProvider`, and the Drizzle schema.
@@ -44,7 +44,7 @@ Every phase follows the same loop:
    Do not rewrite prior migrations.
 5. **Own the workflow in the application layer.** Attempt numbering, stage,
    what may be revealed, and completion are decided in `src/application` /
-   `src/domain` — never by the AI.
+   `src/domain` - never by the AI.
 6. **Wire the UI last.** Server actions in `src/app/**/actions.ts` call
    services; components never touch SQLite or Gemini directly.
 7. **Verify before moving on.** Run `pnpm typecheck && pnpm lint && pnpm test`
@@ -56,7 +56,7 @@ acceptance criteria are demonstrably met (ideally by an automated test).
 
 ---
 
-## Phase 0 — Foundation ✅ Complete
+## Phase 0 - Foundation ✅ Complete
 
 **Goal.** Stand up a runnable, layered, local-first skeleton with the
 non-negotiable seams in place so every later phase plugs in without touching
@@ -83,7 +83,7 @@ product logic.
   WAL + `foreign_keys` enabled. Tables: `profiles`, `practice_sessions`,
   `practice_attempts`, `feedback_items`.
 - **Swappable infra seams** for later phases: `AudioStorage`
-  (`LocalAudioStorage` — files, not blobs) and `SpeechProvider` interfaces.
+  (`LocalAudioStorage` - files, not blobs) and `SpeechProvider` interfaces.
 - **Feedback taxonomy & skill dimensions** (`src/domain/feedback/taxonomy.ts`)
   covering thinking/communication/english/pronunciation/interview codes and 13
   skill dimensions, so aggregation is stable across phases.
@@ -92,7 +92,7 @@ product logic.
 - **UI shell**: App Router layout, sidebar/nav, base UI components, and the
   `/` and `/practice` routes.
 
-**Acceptance criteria — met.**
+**Acceptance criteria - met.**
 
 | Criterion | How verified |
 | --- | --- |
@@ -104,7 +104,7 @@ product logic.
 
 ---
 
-## Phase 1 — Vietnamese Coach (staged coaching loop) ✅ Complete
+## Phase 1 - Vietnamese Coach (staged coaching loop) ✅ Complete
 
 **Goal.** Deliver the core training loop in Vietnamese: the user submits a
 messy thought, the AI diagnoses **thinking vs communication** problems, and the
@@ -113,14 +113,14 @@ the user has done their own thinking.
 
 **What was built.**
 
-- **Critical business rule — staged coaching**
+- **Critical business rule - staged coaching**
   (`src/domain/practice/coaching-stage.ts`). `coachingPolicyForAttempt()`:
   - Attempt 1 → `diagnose` (no rewrite, no direction hints).
   - Attempt 2 → `guide` (direction/structure hints, no rewrite).
   - Attempt 3+ → `improve` (rewrite allowed).
 
   `enforceCoachingPolicy()` strips `improvedVersion` whenever the stage
-  disallows it — a guardrail that holds **regardless of what the model
+  disallows it - a guardrail that holds **regardless of what the model
   returns**.
 - **Application service owns the workflow (Rule 3)**
   (`src/application/practice/vietnamese-coach-service.ts`): decides the attempt
@@ -147,14 +147,14 @@ the user has done their own thinking.
 - **Session recovery seam**: `getActiveVietnameseSession()` surfaces an
   unfinished session on next launch.
 
-**Acceptance criteria — met.**
+**Acceptance criteria - met.**
 
 | Criterion | How verified |
 | --- | --- |
 | Attempt 1 never reveals a full rewrite | `coaching-stage.test.ts` asserts `diagnose`, `canRevealImprovedVersion=false`; enforcement strips `improvedVersion` |
 | Attempt 2 gives direction but no rewrite | `coaching-stage.test.ts` asserts `guide`, `canGiveDirection=true`, rewrite stripped |
 | Attempt 3+ may reveal an improved version | `coaching-stage.test.ts` asserts `improve` for attempts 3/4/10; enforcement keeps `improvedVersion` |
-| Rule holds end-to-end, not just in theory | `vietnamese-coach-service.test.ts` runs the loop against the mock provider + a temp SQLite DB: `improvedVersion` is null on attempts 1–2 and truthy on attempt 3 |
+| Rule holds end-to-end, not just in theory | `vietnamese-coach-service.test.ts` runs the loop against the mock provider + a temp SQLite DB: `improvedVersion` is null on attempts 1-2 and truthy on attempt 3 |
 | User controls completion | e2e test: `completeVietnameseSession` sets status `completed` |
 | Thinking vs communication kept separate | `vietnameseCoachFeedbackSchema` enum + role rules enforce the split |
 | No user work lost on AI failure | Service persists the attempt before the AI call; returns `ai_failed` on known errors |
@@ -165,10 +165,10 @@ the user has done their own thinking.
 
 ---
 
-## Phase 2 — English speaking (voice + transcript) · Planned
+## Phase 2 - English speaking (voice + transcript) · Planned
 
 **Goal.** Add the spoken-English loop: record audio, transcribe, then coach on
-grammar, vocabulary, naturalness, fluency, and fillers — treating **spoken**
+grammar, vocabulary, naturalness, fluency, and fillers - treating **spoken**
 English differently from written, and not auto-flagging natural fillers.
 
 **Seams already present.** `SpeechProvider` (`src/infrastructure/speech/types.ts`),
@@ -179,12 +179,12 @@ English differently from written, and not auto-flagging natural fillers.
 **Acceptance criteria (targets).**
 - Record → store audio as a local file (never a DB blob) → transcribe.
 - Transcript shown per the user's `transcriptMode`.
-- English coaching distinguishes spoken vs written and preserves ~80–90% of
+- English coaching distinguishes spoken vs written and preserves ~80-90% of
   the user's voice.
 - Natural fillers are not automatically flagged.
 - New English coach role has a tagged `promptVersion`; output Zod-validated.
 
-## Phase 3 — Interview mode · Planned
+## Phase 3 - Interview mode · Planned
 
 **Goal.** Structured interview practice (technical + behavioral) with an
 interviewer role that probes depth, tradeoffs, examples, metrics, and
@@ -201,7 +201,7 @@ unsupported claims.
 - Feedback maps to `INTERVIEW_CODES`; depth dimensions scored.
 - Application layer (not the AI) controls question progression/completion.
 
-## Phase 4 — Memory & adaptation · Planned
+## Phase 4 - Memory & adaptation · Planned
 
 **Goal.** Remember meaningful patterns across sessions so future practice
 adapts (the "remember → adapt" tail of the core loop).
@@ -215,7 +215,7 @@ give stable keys to aggregate.
 - Relevant memory is injected into prompts (only the minimum needed).
 - Adaptation is observable across sessions; no PII leaves the machine.
 
-## Phase 5 — Question bank · Planned
+## Phase 5 - Question bank · Planned
 
 **Goal.** A reusable bank of prompts/questions across exercise and interview
 types, selectable and progress-aware.
@@ -227,7 +227,7 @@ types, selectable and progress-aware.
 - Questions stored and referenced by `questionId`.
 - Selection respects mode, exercise type, and (later) difficulty/history.
 
-## Phase 6 — Progress tracking · Planned
+## Phase 6 - Progress tracking · Planned
 
 **Goal.** Track and visualize improvement over time across the 13
 `SKILL_DIMENSIONS`.
@@ -239,7 +239,7 @@ types, selectable and progress-aware.
 - Per-dimension trends derived from stored feedback.
 - Progress view surfaces strengths, recurring weaknesses, and trajectory.
 
-## Phase 7 — Flashcards & spaced review · Planned
+## Phase 7 - Flashcards & spaced review · Planned
 
 **Goal.** Turn recurring mistakes and useful phrasings into spaced-repetition
 review items.
@@ -248,7 +248,7 @@ review items.
 - Flashcard + review-schedule tables (via migration).
 - Cards generated from feedback/memory; a due-review flow.
 
-## Phase 8 — CV / JD ingestion & tailoring · Planned
+## Phase 8 - CV / JD ingestion & tailoring · Planned
 
 **Goal.** Ingest the user's CV and target job descriptions to tailor interview
 questions and feedback to the target role/market.
@@ -262,7 +262,7 @@ questions and feedback to the target role/market.
 - Interview questions and feedback reflect the parsed target role/market.
 - Uploaded documents stay local.
 
-## Phase 9 — Polish, evaluation & hardening · Planned
+## Phase 9 - Polish, evaluation & hardening · Planned
 
 **Goal.** Systematic AI-quality evaluation, UX polish, error hardening, and
 performance work.

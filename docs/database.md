@@ -30,15 +30,15 @@ automatically on boot.
 1. Resolves `DATABASE_PATH`, creates the parent directory if missing.
 2. Opens the file with `better-sqlite3`.
 3. Sets pragmas:
-   - `journal_mode = WAL` — write-ahead logging so reads are not blocked by writes.
-   - `foreign_keys = ON` — foreign-key constraints (and `ON DELETE CASCADE`) are enforced.
+   - `journal_mode = WAL` - write-ahead logging so reads are not blocked by writes.
+   - `foreign_keys = ON` - foreign-key constraints (and `ON DELETE CASCADE`) are enforced.
 4. Wraps the connection with Drizzle (`drizzle(sqlite, { schema })`).
 5. Runs `migrate(instance, { migrationsFolder: path.resolve("drizzle") })`.
    Migration failures are logged (`"Database migration failed"`) but do not crash the process.
 
 The Drizzle instance is a **singleton**: it is cached on `globalThis.__app_db__`
 in non-production so hot reloads reuse one connection. The module is marked
-`import "server-only"` — the database is never bundled into the client.
+`import "server-only"` - the database is never bundled into the client.
 
 ## Current tables
 
@@ -105,7 +105,7 @@ completion are owned by the application service
 Row type: `PracticeAttemptRow`. Maps to domain `PracticeAttempt`.
 
 > Note: `audio_recording_id` and `transcript_id` columns exist now but are not
-> populated in Phase 0/1 — the tables they reference are Planned (see below).
+> populated in Phase 0/1 - the tables they reference are Planned (see below).
 
 ### `feedback_items`
 
@@ -161,7 +161,7 @@ runtime.
    `drizzle/meta/`).
 3. **Run the app.** On boot, `client.ts` calls `migrate(...)` against
    `./drizzle`, applying any pending migrations to the SQLite file. There is no
-   separate "migrate" command in normal use — startup handles it.
+   separate "migrate" command in normal use - startup handles it.
 
 `drizzle.config.ts` points at the schema, outputs to `./drizzle`, uses the
 `sqlite` dialect, and reads the DB URL from `DATABASE_PATH`.
@@ -178,7 +178,7 @@ keeps the SQLite file small and avoids large-blob write amplification under WAL.
   - Files are written under `AUDIO_STORAGE_DIR` (default `./.data/audio`).
   - Filenames are `${id}.${ext}`, with extension derived from MIME type
     (`webm`, `ogg`, `m4a`, `mp3`, `wav`, else `bin`).
-  - `StoredAudio` records `relativePath`, `mimeType`, and `bytes` — the metadata
+  - `StoredAudio` records `relativePath`, `mimeType`, and `bytes` - the metadata
     a future `audio_recordings` table will persist.
 
 ## Deletion and privacy controls
@@ -187,8 +187,8 @@ Because everything is local, privacy is primarily a function of what lives on th
 user's disk and how it is removed.
 
 - **Repository deletions** (`practice-repository.ts`):
-  - `deleteAttempt(attemptId)` — removes an attempt (cascades to its feedback items).
-  - `deleteSession(sessionId)` — removes a session (cascades to attempts, then feedback items).
+  - `deleteAttempt(attemptId)` - removes an attempt (cascades to its feedback items).
+  - `deleteSession(sessionId)` - removes a session (cascades to attempts, then feedback items).
 - **Cascade guarantees:** enabled by `foreign_keys = ON`, so deleting a parent
   never orphans children.
 - **Audio deletion:** `LocalAudioStorage.delete(relativePath)` removes the file

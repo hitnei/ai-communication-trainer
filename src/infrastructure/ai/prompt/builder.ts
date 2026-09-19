@@ -6,7 +6,7 @@ import { GLOBAL_AI_RULES } from "./global-rules";
  *
  *   Global AI Rules + Role Rules + User Context + Relevant Memory + Task + Schema
  *
- * Only relevant context/memory should be passed in — never the whole DB (§93).
+ * Only relevant context/memory should be passed in - never the whole DB (§93).
  */
 export interface PromptSections {
   roleRules: string;

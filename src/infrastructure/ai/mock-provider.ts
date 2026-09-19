@@ -16,7 +16,7 @@ import type {
  *
  * Note on the coaching stage: this mock may return a full object (including an
  * improved version). Enforcing "no full rewrite before attempt 3" is the
- * APPLICATION layer's job (Rule 3), not the provider's — so canned output here
+ * APPLICATION layer's job (Rule 3), not the provider's - so canned output here
  * does not violate the staged-coaching rule.
  */
 export class MockAIProvider implements AIProvider {

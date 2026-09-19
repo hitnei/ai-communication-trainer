@@ -38,7 +38,7 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
 
 /**
  * Gemini implementation of AIProvider. This is the only file that imports the
- * Gemini SDK — the rest of the app depends solely on the AIProvider interface.
+ * Gemini SDK - the rest of the app depends solely on the AIProvider interface.
  */
 export class GeminiAIProvider implements AIProvider {
   readonly name = "gemini";
