@@ -25,6 +25,50 @@ export const profiles = sqliteTable("profiles", {
   updatedAt: text("updated_at").notNull().default(now),
 });
 
+// Phase 8: project knowledge (§43) and job descriptions (§44).
+export const projects = sqliteTable("projects", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  company: text("company").notNull().default(""),
+  role: text("role").notNull().default(""),
+  overview: text("overview").notNull().default(""),
+  techStack: text("tech_stack").notNull().default("[]"),
+  responsibilities: text("responsibilities").notNull().default(""),
+  challenges: text("challenges").notNull().default(""),
+  solutions: text("solutions").notNull().default(""),
+  architecture: text("architecture").notNull().default(""),
+  performance: text("performance").notNull().default(""),
+  leadership: text("leadership").notNull().default(""),
+  collaboration: text("collaboration").notNull().default(""),
+  conflicts: text("conflicts").notNull().default(""),
+  achievements: text("achievements").notNull().default(""),
+  createdAt: text("created_at").notNull().default(now),
+  updatedAt: text("updated_at").notNull().default(now),
+});
+
+export const jobDescriptions = sqliteTable("job_descriptions", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull().default(""),
+  company: text("company").notNull().default(""),
+  rawText: text("raw_text").notNull(),
+  seniority: text("seniority").notNull().default(""),
+  summary: text("summary").notNull().default(""),
+  overallStatus: text("overall_status").notNull().default("unknown"),
+  createdAt: text("created_at").notNull().default(now),
+});
+
+export const jobRequirements = sqliteTable("job_requirements", {
+  id: text("id").primaryKey(),
+  jobDescriptionId: text("job_description_id")
+    .notNull()
+    .references(() => jobDescriptions.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  category: text("category").notNull().default("other"),
+  matchStatus: text("match_status").notNull().default("unknown"),
+  note: text("note").notNull().default(""),
+  createdAt: text("created_at").notNull().default(now),
+});
+
 export const practiceSessions = sqliteTable("practice_sessions", {
   id: text("id").primaryKey(),
   mode: text("mode").notNull(), // "vietnamese" | "english"

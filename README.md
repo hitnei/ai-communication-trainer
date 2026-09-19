@@ -11,9 +11,14 @@ You communicate → AI analyzes → root problem → you retry → attempts comp
 
 ## Status
 
-- **Phase 0 - Foundation:** ✅ complete
-- **Phase 1 - Vietnamese Coach (staged coaching loop):** ✅ complete
-- Phases 2-9 (English voice, interviews, memory, question bank, progress, flashcards, CV/JD): planned. See [docs/development-phases.md](docs/development-phases.md).
+All feature phases (0-8) are **complete and verified**. The full training loop is
+built: Vietnamese coaching, English voice practice, individual + full interview
+simulation, personal memory, question bank, progress tracking, flashcards, and
+CV/Projects/JD personalization. See [docs/development-phases.md](docs/development-phases.md).
+
+- Think → [Vietnamese practice](src/app/practice/vietnamese) · Speak → [English voice](src/app/practice/english)
+- Perform → [Interviews](src/app/interview) · Remember → [Memory](src/app/memory) · Adapt → [Progress](src/app/progress)
+- Plus [Question Bank](src/app/questions), [Flashcards](src/app/flashcards), and [Profile / CV / JD](src/app/profile).
 
 ## Stack
 

@@ -5,11 +5,12 @@ runnable and green (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`)
 and never replaces a core business rule with simplified behavior (see
 `CLAUDE.md` / `AGENTS.md`).
 
-Phases 0-7 are **complete and verified**: Foundation, Vietnamese Coach, English
-voice, Individual Interview, Full Interview Simulation, Personal Memory, the
-Question Bank, Progress tracking, and Flashcards. Only Phase 8 (CV / Projects /
-JD) remains **planned**; its scope below reflects the infrastructure and schema
-seams that exist, but the product logic is **not yet built**.
+All feature phases (0-8) are **complete and verified**. The whole product loop -
+Think (Vietnamese) → Speak (English voice) → Perform (interviews) → Remember
+(memory) → Adapt (progress + recommendations), plus the Question Bank,
+Flashcards, and CV/Projects/JD personalization - is built, tested, and runnable.
+Phase 9 (ongoing polish/eval/hardening) is continuous rather than a one-time
+deliverable.
 
 | Phase | Name | Status |
 | --- | --- | --- |
@@ -22,8 +23,8 @@ seams that exist, but the product logic is **not yet built**.
 | 5 | Question bank | ✅ Complete |
 | 6 | Progress tracking | ✅ Complete |
 | 7 | Flashcards & spaced review | ✅ Complete |
-| 8 | CV / JD ingestion & tailoring | Planned |
-| 9 | Polish, evaluation & hardening | Planned |
+| 8 | CV / JD ingestion & tailoring | ✅ Complete |
+| 9 | Polish, evaluation & hardening | Ongoing |
 
 ---
 
@@ -395,21 +396,37 @@ alternatives - with spaced repetition and speaking practice.
 - A speaking review exists (record → pronunciation analysis). ✅
 - Spaced repetition schedules reviews (new → review → mature; lapses on 'again'). ✅
 
-## Phase 8 - CV / JD ingestion & tailoring · Planned
+## Phase 8 - CV / Projects / JD ✅ Complete
 
-**Goal.** Ingest the user's CV and target job descriptions to tailor interview
-questions and feedback to the target role/market.
+**Goal.** Ingest the user's CV, project knowledge, and target job descriptions to
+make generated interview questions substantially personalized.
 
-**Seams already present.** `profiles` fields: `currentRole`,
-`yearsExperience`, `targetRole`, `targetMarkets`, `primarySkills`,
-`secondarySkills`, `englishGoal`.
+**What was built.**
+- Domain (`src/domain/profile/`): Profile, Project (the §43 fields), JobDescription
+  + JobRequirement, a non-judgmental match scale (§44), and Zod schemas for CV
+  extraction and JD analysis.
+- DB tables `projects`, `job_descriptions`, `job_requirements` (profiles already
+  existed). Repositories for each.
+- `cv-extractor@1.0`: pastes a CV → structured draft that is **never
+  authoritative** - the user reviews/edits and chooses which projects to add (§42).
+- `jd-analyzer@1.0`: JD → requirements categorized with a match/gap status vs the
+  candidate's profile and projects, with an honest, non-judgmental summary (§44,
+  §74); never invents skills.
+- The question generator now accepts `projectContext` and `jobContext`; regular
+  generation is grounded in real projects, and "Generate interview track" builds
+  a JD-tailored batch (gaps first) straight into the Question Bank.
+- UI on `/profile`: profile editor + CV import (extract → review → save),
+  full projects CRUD, and JD paste → analyze → match view → generate track.
+  Profile enabled in nav.
 
-**Acceptance criteria (targets).**
-- CV/JD parsed into structured, Zod-validated profile/target data.
-- Interview questions and feedback reflect the parsed target role/market.
-- Uploaded documents stay local.
+**Acceptance - met and verified** (`profile-service.test.ts`):
+- CV extraction is a reviewable draft, not auto-saved (§42). ✅
+- Projects persist and carry the §43 knowledge fields. ✅
+- JD analysis yields match/gap requirements without harsh language (§44). ✅
+- A job-specific track adds personalized questions - "Interview questions become
+  substantially personalized." ✅
 
-## Phase 9 - Polish, evaluation & hardening · Planned
+## Phase 9 - Polish, evaluation & hardening · Ongoing
 
 **Goal.** Systematic AI-quality evaluation, UX polish, error hardening, and
 performance work.

@@ -47,7 +47,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Flashcards", href: "/flashcards", icon: Layers, available: true },
   { label: "Memory", href: "/memory", icon: Brain, available: true },
   { label: "Progress", href: "/progress", icon: LineChart, available: true },
-  { label: "Profile", href: "/profile", icon: UserCog, available: false },
+  { label: "Profile", href: "/profile", icon: UserCog, available: true },
 ];
 
 export { Mic };

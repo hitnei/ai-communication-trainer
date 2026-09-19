@@ -280,4 +280,49 @@ const mockResponses: Record<string, (prompt: string) => unknown> = {
       },
     ],
   }),
+
+  "cv-extractor": () => ({
+    currentRole: "Senior Frontend Engineer",
+    yearsExperience: 6,
+    primarySkills: ["React", "TypeScript", "Next.js"],
+    secondarySkills: ["Node.js", "Performance"],
+    projects: [
+      {
+        name: "Analytics Dashboard",
+        company: "Acme",
+        role: "Lead Frontend",
+        overview: "A high-traffic analytics dashboard for enterprise customers.",
+        techStack: ["React", "TypeScript", "Next.js"],
+      },
+    ],
+  }),
+
+  "jd-analyzer": () => ({
+    title: "Senior Frontend Engineer",
+    company: "Example Co",
+    seniority: "Senior",
+    summary:
+      "Strong React/TypeScript role emphasising performance and leading technical decisions. Good overall fit; the main gap to shore up is measurable performance impact.",
+    overallStatus: "medium",
+    requirements: [
+      {
+        text: "5+ years building production React applications",
+        category: "technical",
+        matchStatus: "strong",
+        note: "Matches 6 years of React experience.",
+      },
+      {
+        text: "Drive frontend architecture decisions across teams",
+        category: "architecture",
+        matchStatus: "medium",
+        note: "Some architecture experience; add cross-team examples.",
+      },
+      {
+        text: "Demonstrable performance optimization with metrics",
+        category: "technical",
+        matchStatus: "weak",
+        note: "Practice framing improvements with concrete numbers.",
+      },
+    ],
+  }),
 };

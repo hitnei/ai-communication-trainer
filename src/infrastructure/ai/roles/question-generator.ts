@@ -29,6 +29,10 @@ export interface GenerateQuestionsInput {
   existingQuestions: string[];
   removedFeedback: { text: string; reason: string }[];
   weaknessSummary?: string;
+  /** Candidate's projects, to ground questions in real experience (§43, §73). */
+  projectContext?: string;
+  /** A specific job description to tailor a track to (§44). */
+  jobContext?: string;
 }
 
 export async function generateQuestions(
@@ -55,6 +59,12 @@ export async function generateQuestions(
           .slice(0, 20)
           .map((r) => `- "${r.text}" (${r.reason})`)
           .join("\n")}`
+      : "",
+    input.projectContext
+      ? `Ground some questions in the candidate's real projects (ask about their actual decisions/challenges, don't invent):\n${input.projectContext}`
+      : "",
+    input.jobContext
+      ? `Tailor this batch to the following job description - prioritise its requirements and likely gaps:\n${input.jobContext}`
       : "",
   ]
     .filter(Boolean)

@@ -14,6 +14,7 @@ import { generateQuestions } from "@/infrastructure/ai/roles/question-generator"
 import { questionRepository } from "@/infrastructure/db/repositories/question-repository";
 import { profileRepository } from "@/infrastructure/db/repositories/profile-repository";
 import { buildMemorySummary } from "@/application/memory/memory-service";
+import { buildProjectsSummary } from "@/application/profile/project-service";
 
 /**
  * Application service for the question bank (§36-§40). It owns generation,
@@ -31,12 +32,15 @@ export async function generateQuestionCandidates(input: {
   technologies?: string[];
   difficulty?: Difficulty;
   count?: number;
+  /** Personalize to a specific job description (§44). */
+  jobContext?: string;
 }): Promise<GenerateResult> {
   const count = input.count ?? 10;
   const existing = questionRepository.allTexts();
   const removedFeedback = questionRepository.recentRemovalFeedback();
   const targetRole =
     profileRepository.getOrCreate().targetRole ?? "Senior Frontend Engineer";
+  const projectContext = buildProjectsSummary();
 
   const generated = await generateQuestions({
     categories: input.categories,
@@ -50,6 +54,10 @@ export async function generateQuestionCandidates(input: {
       "interview_pattern",
       "communication_pattern",
     ]),
+    // Ground questions in real projects when we have them (§43, §73).
+    projectContext:
+      projectContext === "(no projects on file)" ? undefined : projectContext,
+    jobContext: input.jobContext,
   });
 
   // Filter exact + near-duplicates against existing questions, previously
