@@ -67,6 +67,15 @@ export const practiceRepository = {
     return row ? mapSession(row) : null;
   },
 
+  listAllSessions(): PracticeSession[] {
+    return db
+      .select()
+      .from(practiceSessions)
+      .orderBy(asc(practiceSessions.startedAt))
+      .all()
+      .map(mapSession);
+  },
+
   getActiveSession(mode: string): PracticeSession | null {
     const row = db
       .select()

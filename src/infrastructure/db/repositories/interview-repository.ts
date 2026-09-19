@@ -82,6 +82,15 @@ export const interviewRepository = {
     return row ? mapSession(row) : null;
   },
 
+  listAllSessions(): InterviewSession[] {
+    return db
+      .select()
+      .from(interviewSessions)
+      .orderBy(asc(interviewSessions.startedAt))
+      .all()
+      .map(mapSession);
+  },
+
   getActiveSession(mode: InterviewSession["mode"]): InterviewSession | null {
     const row = db
       .select()

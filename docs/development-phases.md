@@ -5,12 +5,12 @@ runnable and green (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`)
 and never replaces a core business rule with simplified behavior (see
 `CLAUDE.md` / `AGENTS.md`).
 
-Phases 0-5 are **complete and verified**: Foundation, Vietnamese Coach, English
-voice, Individual Interview, Full Interview Simulation, Personal Memory, and the
-Question Bank. The remaining phases are **planned**; their scope below reflects
-the infrastructure interfaces, schema columns, feedback codes, and skill
-dimensions that already exist in the codebase as seams for the work, but the
-product logic is **not yet built**.
+Phases 0-6 are **complete and verified**: Foundation, Vietnamese Coach, English
+voice, Individual Interview, Full Interview Simulation, Personal Memory, the
+Question Bank, and Progress tracking. The remaining phases are **planned**; their
+scope below reflects the infrastructure interfaces, schema columns, feedback
+codes, and skill dimensions that already exist in the codebase as seams for the
+work, but the product logic is **not yet built**.
 
 | Phase | Name | Status |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ product logic is **not yet built**.
 | 3b | Interview - Full simulation | ✅ Complete |
 | 4 | Memory & adaptation | ✅ Complete |
 | 5 | Question bank | ✅ Complete |
-| 6 | Progress tracking | Planned |
+| 6 | Progress tracking | ✅ Complete |
 | 7 | Flashcards & spaced review | Planned |
 | 8 | CV / JD ingestion & tailoring | Planned |
 | 9 | Polish, evaluation & hardening | Planned |
@@ -337,17 +337,36 @@ combining categories, generating in batches, reviewing, and curating.
 **Note.** Automatic status transitions from practice results (practicing → weak →
 improving → mastered) arrive with Progress (Phase 6); status is user-settable now.
 
-## Phase 6 - Progress tracking · Planned
+## Phase 6 - Progress tracking ✅ Complete
 
-**Goal.** Track and visualize improvement over time across the 13
-`SKILL_DIMENSIONS`.
+**Goal.** Track improvement over time across the 13 `SKILL_DIMENSIONS`, with
+evidence rather than a single exam score, and drive recommendations.
 
-**Seams already present.** `SKILL_DIMENSIONS`, normalized feedback codes,
-`feedback_items` history.
+**What was built.**
+- `src/domain/progress/dimensions.ts`: maps every feedback code to a skill
+  dimension, plus per-dimension practice suggestions.
+- `progress-service.ts` rolls up issues actually observed across all completed
+  practice + interview sessions into per-dimension trends (recent vs earlier,
+  with counts as evidence), a measurable answer-length metric ("earlier avg N
+  words → recent avg M"), and recurring mistakes drawn from memory with real
+  before/after example quotes. No invented per-dimension scores (§49).
+- `recommendation-service.ts` (§52): ranks by weakness severity, recurrence, and
+  recency (from memory), is time-aware (§15), and every item explains WHY (§13).
+- UI: a Progress page (Communication Profile with per-dimension trend + evidence,
+  answer-length metric, recurring mistakes with examples + suggested practice)
+  and a dashboard that now shows real, evidence-backed recommendations. Progress
+  and Memory are enabled in the nav.
 
-**Acceptance criteria (targets).**
-- Per-dimension trends derived from stored feedback.
-- Progress view surfaces strengths, recurring weaknesses, and trajectory.
+**Acceptance - met and verified** (`progress-service.test.ts`):
+- Per-dimension trends are derived from stored feedback, each with count-based
+  evidence. ✅
+- Progress surfaces recurring weaknesses with concrete examples and a length
+  metric. ✅
+- Every claim is backed by evidence - "Progress contains evidence." ✅
+
+**Note.** Trends currently use issue-frequency (recent vs earlier) as an
+evidence-based proxy; explicit numeric per-dimension scoring by the AI is a
+possible future refinement but was avoided to prevent fabricated precision (§49).
 
 ## Phase 7 - Flashcards & spaced review · Planned
 

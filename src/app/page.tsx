@@ -15,8 +15,15 @@ import { getActiveIndividualInterview } from "@/application/interview/individual
 import { getActiveSimulation } from "@/application/interview/simulation-service";
 import { listMemories } from "@/application/memory/memory-service";
 import { MEMORY_STATUS_LABEL } from "@/domain/memory/types";
+import { getRecommendations } from "@/application/recommendation/recommendation-service";
 
 export const dynamic = "force-dynamic";
+
+const PRIORITY_VARIANT = {
+  high: "default",
+  medium: "secondary",
+  low: "muted",
+} as const;
 
 export default function DashboardPage() {
   const activeSession = getActiveVietnameseSession();
@@ -24,6 +31,7 @@ export default function DashboardPage() {
   const activeInterview = getActiveIndividualInterview();
   const activeSimulation = getActiveSimulation();
   const topFocus = listMemories().find((m) => m.liveStatus !== "stable");
+  const recommendations = getRecommendations();
 
   return (
     <div className="space-y-8">
@@ -161,77 +169,35 @@ export default function DashboardPage() {
         <h2 className="text-sm font-medium text-muted-foreground">
           Recommended practice
         </h2>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <CardTitle className="text-base">
-                Explain a technical blocker in 45 seconds
-              </CardTitle>
-              <Badge variant="muted">≈ 8-10 min</Badge>
-            </div>
-            <CardDescription>
-              <span className="font-medium text-foreground">Why this? </span>
-              Getting to your main point early is the highest-value habit for
-              interviews and standups. Start in Vietnamese to fix the thinking
-              first, then move it into English later.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link
-              href="/practice/vietnamese"
-              className={buttonVariants()}
-            >
-              Start practice <ArrowRight className="size-4" />
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <CardTitle className="text-base">
-                Say a technical blocker out loud, in English
-              </CardTitle>
-              <Badge variant="muted">≈ 10 min</Badge>
-            </div>
-            <CardDescription>
-              <span className="font-medium text-foreground">Why this? </span>
-              Once the thinking is clear, practice it by voice. You&apos;ll get a
-              transcript plus feedback on clarity, natural English, and
-              pronunciation, then retry.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/practice/english" className={buttonVariants({ variant: "outline" })}>
-              Start speaking <ArrowRight className="size-4" />
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <CardTitle className="text-base">
-                Practice one interview question deeply
-              </CardTitle>
-              <Badge variant="muted">≈ 15 min</Badge>
-            </div>
-            <CardDescription>
-              <span className="font-medium text-foreground">Why this? </span>
-              A senior interviewer will push on why, trade-offs, and metrics. Get
-              one adaptive follow-up per answer that targets exactly what you left
-              out, then retry.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link
-              href="/interview/individual"
-              className={buttonVariants({ variant: "outline" })}
-            >
-              Start interview <ArrowRight className="size-4" />
-            </Link>
-          </CardContent>
-        </Card>
+        {recommendations.map((rec, i) => (
+          <Card key={i}>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-4">
+                <CardTitle className="text-base">{rec.title}</CardTitle>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge variant={PRIORITY_VARIANT[rec.priority]}>
+                    {rec.priority}
+                  </Badge>
+                  <Badge variant="muted">≈ {rec.estimatedMinutes} min</Badge>
+                </div>
+              </div>
+              <CardDescription>
+                <span className="font-medium text-foreground">Why this? </span>
+                {rec.why}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link
+                href={rec.href}
+                className={buttonVariants({
+                  variant: i === 0 ? "default" : "outline",
+                })}
+              >
+                Start <ArrowRight className="size-4" />
+              </Link>
+            </CardContent>
+          </Card>
+        ))}
       </section>
 
       <section className="space-y-3">
