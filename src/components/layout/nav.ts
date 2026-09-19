@@ -36,7 +36,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Interview",
     href: "/interview",
     icon: UsersRound,
-    available: false,
+    available: true,
     children: [
       { label: "Individual", href: "/interview/individual" },
       { label: "Full Simulation", href: "/interview/simulation" },

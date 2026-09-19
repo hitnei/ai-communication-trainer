@@ -85,9 +85,44 @@ export const transcripts = sqliteTable("transcripts", {
   createdAt: text("created_at").notNull().default(now),
 });
 
+// Phase 3: interviews (§61, §62). Each turn is one question + its answer +
+// the interviewer's feedback (stored as JSON), which is a practical read of the
+// conceptual turn model.
+export const interviewSessions = sqliteTable("interview_sessions", {
+  id: text("id").primaryKey(),
+  mode: text("mode").notNull(), // "individual" | "simulation"
+  categories: text("categories").notNull(), // JSON array of category keys
+  technologies: text("technologies").notNull().default("[]"), // JSON array
+  durationMinutes: integer("duration_minutes"),
+  status: text("status").notNull().default("active"),
+  // The question currently awaiting an answer (for resume, §78) and its kind.
+  pendingQuestion: text("pending_question"),
+  pendingKind: text("pending_kind"),
+  startedAt: text("started_at").notNull().default(now),
+  completedAt: text("completed_at"),
+});
+
+export const interviewTurns = sqliteTable("interview_turns", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id")
+    .notNull()
+    .references(() => interviewSessions.id, { onDelete: "cascade" }),
+  sequence: integer("sequence").notNull(),
+  kind: text("kind").notNull(), // "opening" | "followup" | "retry"
+  question: text("question").notNull(),
+  answer: text("answer"),
+  audioRecordingId: text("audio_recording_id"),
+  transcriptId: text("transcript_id"),
+  feedbackPayload: text("feedback_payload"), // JSON of InterviewFeedback
+  promptVersion: text("prompt_version"),
+  createdAt: text("created_at").notNull().default(now),
+});
+
 export type ProfileRow = typeof profiles.$inferSelect;
 export type PracticeSessionRow = typeof practiceSessions.$inferSelect;
 export type PracticeAttemptRow = typeof practiceAttempts.$inferSelect;
 export type FeedbackItemRow = typeof feedbackItems.$inferSelect;
 export type AudioRecordingRow = typeof audioRecordings.$inferSelect;
 export type TranscriptRow = typeof transcripts.$inferSelect;
+export type InterviewSessionRow = typeof interviewSessions.$inferSelect;
+export type InterviewTurnRow = typeof interviewTurns.$inferSelect;

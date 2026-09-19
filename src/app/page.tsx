@@ -11,12 +11,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getActiveVietnameseSession } from "@/application/practice/vietnamese-coach-service";
 import { getActiveEnglishSession } from "@/application/practice/english-practice-service";
+import { getActiveIndividualInterview } from "@/application/interview/individual-interview-service";
 
 export const dynamic = "force-dynamic";
 
 export default function DashboardPage() {
   const activeSession = getActiveVietnameseSession();
   const activeEnglish = getActiveEnglishSession();
+  const activeInterview = getActiveIndividualInterview();
 
   return (
     <div className="space-y-8">
@@ -75,6 +77,30 @@ export default function DashboardPage() {
         </Card>
       )}
 
+      {activeInterview && (
+        <Card className="border-primary/30 bg-accent/40">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Clock className="size-4 text-primary" />
+              <CardTitle className="text-base">
+                Unfinished interview
+              </CardTitle>
+            </div>
+            <CardDescription className="line-clamp-2">
+              {activeInterview.pendingQuestion ?? "Continue where you left off."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href={`/interview/individual?session=${activeInterview.id}`}
+              className={buttonVariants({ size: "sm" })}
+            >
+              Continue <ArrowRight className="size-4" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground">
           Recommended practice
@@ -122,6 +148,31 @@ export default function DashboardPage() {
           <CardContent>
             <Link href="/practice/english" className={buttonVariants({ variant: "outline" })}>
               Start speaking <ArrowRight className="size-4" />
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="text-base">
+                Practice one interview question deeply
+              </CardTitle>
+              <Badge variant="muted">≈ 15 min</Badge>
+            </div>
+            <CardDescription>
+              <span className="font-medium text-foreground">Why this? </span>
+              A senior interviewer will push on why, trade-offs, and metrics. Get
+              one adaptive follow-up per answer that targets exactly what you left
+              out, then retry.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href="/interview/individual"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Start interview <ArrowRight className="size-4" />
             </Link>
           </CardContent>
         </Card>

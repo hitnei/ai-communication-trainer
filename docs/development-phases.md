@@ -5,18 +5,19 @@ runnable and green (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`)
 and never replaces a core business rule with simplified behavior (see
 `CLAUDE.md` / `AGENTS.md`).
 
-Phase 0 (Foundation), Phase 1 (Vietnamese Coach), and Phase 2 (English voice)
-are **complete and verified**. Phases 3-9 are **planned**; their scope below
-reflects the infrastructure interfaces, schema columns, feedback codes, and skill
-dimensions that already exist in the codebase as seams for the work, but the
-product logic for those phases is **not yet built**.
+Phase 0 (Foundation), Phase 1 (Vietnamese Coach), Phase 2 (English voice), and
+Phase 3 (Individual Interview) are **complete and verified**. The remaining
+phases are **planned**; their scope below reflects the infrastructure interfaces,
+schema columns, feedback codes, and skill dimensions that already exist in the
+codebase as seams for the work, but the product logic is **not yet built**.
 
 | Phase | Name | Status |
 | --- | --- | --- |
 | 0 | Foundation | ✅ Complete |
 | 1 | Vietnamese Coach (staged coaching loop) | ✅ Complete |
 | 2 | English speaking (voice + transcript) | ✅ Complete |
-| 3 | Interview mode | Planned |
+| 3 | Interview - Individual practice | ✅ Complete |
+| 3b | Interview - Full simulation | Planned |
 | 4 | Memory & adaptation | Planned |
 | 5 | Question bank | Planned |
 | 6 | Progress tracking | Planned |
@@ -203,22 +204,47 @@ HTTP smoke test of record→transcribe→analyze→replay):
 phoneme-level scoring). Live transcript depends on browser Web Speech API
 support (Chrome/Edge/Safari); elsewhere the server transcript is used after stop.
 
-## Phase 3 - Interview mode · Planned
+## Phase 3 - Interview: Individual practice ✅ Complete
 
-**Goal.** Structured interview practice (technical + behavioral) with an
-interviewer role that probes depth, tradeoffs, examples, metrics, and
-unsupported claims.
+**Goal.** Master one interview question at a time with an interviewer that
+probes senior-level depth (why, trade-offs, alternatives, impact, metrics) and
+asks a follow-up built from the candidate's actual answer.
 
-**Seams already present.** `INTERVIEW_CODES`
-(`too_generic`, `insufficient_depth`, `weak_tradeoff`, `weak_example`,
-`unsupported_claim`, `missing_metric`), `interview_answer` exercise type,
-`technical_depth` / `behavioral_depth` skill dimensions,
-`practice_sessions.questionId`.
+**What was built.**
+- Interview domain (`src/domain/interview/`): session/turn types, combinable
+  categories (React-first + behavioral/leadership), `interview-feedback.ts` Zod
+  schema (maps to `INTERVIEW_CODES`), and a seed opening-question bank.
+- DB tables `interview_sessions` / `interview_turns` (each turn = question +
+  answer + feedback JSON), with `pendingQuestion`/`pendingKind` on the session
+  for resume (§78). `interview-repository.ts`.
+- `interviewer@1.0` role with two calls: generate an opening question, and
+  evaluate an answer + produce an adaptive follow-up. Mock fixtures included.
+- Voice answers reuse the Phase 2 recorder + `SpeechProvider` transcription and
+  local audio storage; `POST /api/interview/individual/answer`.
+- `individual-interview-service.ts` owns the flow: it holds the pending
+  question, chooses retry vs follow-up, evaluates, and advances state - the AI
+  never controls progression (Rule 3). No grammar correction during interview
+  (§32); feedback is substance-only.
+- UI: category setup, sticky current question, voice answer, feedback view,
+  adaptive follow-up (with a "why I'm asking" rationale), retry, and finish.
 
-**Acceptance criteria (targets).**
-- Interviewer role asks role-relevant questions and follow-ups.
-- Feedback maps to `INTERVIEW_CODES`; depth dimensions scored.
-- Application layer (not the AI) controls question progression/completion.
+**Acceptance - met and verified** (e2e test `individual-interview-service.test.ts`
++ HTTP smoke test):
+- Interviewer asks role-relevant questions and **follow-ups generated from the
+  user's actual answer**. ✅
+- Feedback maps to `INTERVIEW_CODES` with evidence quotes and top focus areas. ✅
+- The application layer (not the AI) controls question progression/completion. ✅
+- Same question can be retried, with a before/after comparison. ✅
+
+**Not in this phase.** Full timed simulation (interviewer stays in role until the
+end, review afterward) is Phase 3b. Depth-dimension scoring over time lands with
+Progress (Phase 6).
+
+## Phase 3b - Interview: Full simulation · Planned
+
+**Goal.** A timed end-to-end mock interview where the AI stays strictly in the
+interviewer role (no coaching mid-answer, §32) and delivers a full review only
+at the end. Reuses the interview schema, adding a state machine and duration.
 
 ## Phase 4 - Memory & adaptation · Planned
 

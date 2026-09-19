@@ -151,4 +151,40 @@ const mockResponses: Record<string, (prompt: string) => unknown> = {
       { word: "sequential", note: "Land each syllable: se-quen-tial." },
     ],
   }),
+
+  "interview-question": () => ({
+    question:
+      "Walk me through a time you improved the performance of a React app - what was slow, what you changed, and how you knew it worked.",
+  }),
+
+  "interview-coach": () => ({
+    summary:
+      "Solid direction, but it stays at the 'what' level - I don't yet hear the reasoning or the numbers behind it.",
+    strengths: ["You named a concrete change (batching requests)."],
+    issues: [
+      {
+        code: "missing_metric",
+        title: "No measurement",
+        detail:
+          "You say it got faster but don't say by how much or how you measured it.",
+        evidence: "to make it faster",
+      },
+      {
+        code: "weak_tradeoff",
+        title: "No trade-off discussed",
+        detail:
+          "Batching has costs (latency coupling, error handling). A senior answer names what you gave up.",
+        evidence: null,
+      },
+    ],
+    topFocusAreas: [
+      "Quantify the impact with a before/after number",
+      "Name the trade-off you accepted",
+    ],
+    followUpQuestion:
+      "You said it got faster - how did you measure that, and what was the before/after number?",
+    followUpRationale:
+      "The answer claimed a performance win (unsupported_claim / missing_metric), so I'm probing for measurement.",
+    comparison: null,
+  }),
 };
