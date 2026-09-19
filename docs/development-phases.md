@@ -5,12 +5,11 @@ runnable and green (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`)
 and never replaces a core business rule with simplified behavior (see
 `CLAUDE.md` / `AGENTS.md`).
 
-Phases 0-6 are **complete and verified**: Foundation, Vietnamese Coach, English
+Phases 0-7 are **complete and verified**: Foundation, Vietnamese Coach, English
 voice, Individual Interview, Full Interview Simulation, Personal Memory, the
-Question Bank, and Progress tracking. The remaining phases are **planned**; their
-scope below reflects the infrastructure interfaces, schema columns, feedback
-codes, and skill dimensions that already exist in the codebase as seams for the
-work, but the product logic is **not yet built**.
+Question Bank, Progress tracking, and Flashcards. Only Phase 8 (CV / Projects /
+JD) remains **planned**; its scope below reflects the infrastructure and schema
+seams that exist, but the product logic is **not yet built**.
 
 | Phase | Name | Status |
 | --- | --- | --- |
@@ -22,7 +21,7 @@ work, but the product logic is **not yet built**.
 | 4 | Memory & adaptation | ✅ Complete |
 | 5 | Question bank | ✅ Complete |
 | 6 | Progress tracking | ✅ Complete |
-| 7 | Flashcards & spaced review | Planned |
+| 7 | Flashcards & spaced review | ✅ Complete |
 | 8 | CV / JD ingestion & tailoring | Planned |
 | 9 | Polish, evaluation & hardening | Planned |
 
@@ -368,14 +367,33 @@ evidence rather than a single exam score, and drive recommendations.
 evidence-based proxy; explicit numeric per-dimension scoring by the AI is a
 possible future refinement but was avoided to prevent fabricated precision (§49).
 
-## Phase 7 - Flashcards & spaced review · Planned
+## Phase 7 - Flashcards & spaced review ✅ Complete
 
-**Goal.** Turn recurring mistakes and useful phrasings into spaced-repetition
-review items.
+**Goal.** A Speaking Phrase Bank (§53) - useful phrases and more natural
+alternatives - with spaced repetition and speaking practice.
 
-**Acceptance criteria (targets).**
-- Flashcard + review-schedule tables (via migration).
-- Cards generated from feedback/memory; a due-review flow.
+**What was built.**
+- Domain: flashcard types + a pure `SpacedRepetitionEngine` (`srs.ts`, SM-2
+  variant tracking new → learning → review → mature with ease and lapses).
+- DB tables `flashcards`, `flashcard_reviews`, `phrase_suggestions`.
+- `flashcard-suggestor@1.0` role mines the user's recent transcripts for phrases
+  (natural alternatives with `replacementFor`, interview/useful phrases, vocab
+  gaps). Mock includes the spec's "I have a problem about…" → "I'm running into
+  an issue with…" example (§55).
+- `flashcard-service.ts`: suggestions are stored as **pending and never
+  auto-added** (§54) - the user adds or dismisses each; deterministic dedupe
+  against existing cards/suggestions; manual add; SRS-scheduled review.
+- Speaking review (§56): `POST /api/flashcards/speak` records the phrase and runs
+  the pronunciation coach (reused from Phase 2), in-memory (not stored).
+- UI: suggest bar (from recent practice or pasted text), a due-review flow with
+  self-rating + "Speak & check pronunciation", a suggestions inbox (add/dismiss),
+  and an all-cards list with manual add and delete. Flashcards enabled in nav.
+
+**Acceptance - met and verified** (`srs.test.ts` + `flashcard-service.test.ts`):
+- The AI suggests phrases; the user controls which become flashcards (§54). ✅
+- Context-aware suggestions work (mined from the user's own answers). ✅
+- A speaking review exists (record → pronunciation analysis). ✅
+- Spaced repetition schedules reviews (new → review → mature; lapses on 'again'). ✅
 
 ## Phase 8 - CV / JD ingestion & tailoring · Planned
 

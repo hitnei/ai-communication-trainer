@@ -44,7 +44,7 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "Question Bank", href: "/questions", icon: Library, available: true },
-  { label: "Flashcards", href: "/flashcards", icon: Layers, available: false },
+  { label: "Flashcards", href: "/flashcards", icon: Layers, available: true },
   { label: "Memory", href: "/memory", icon: Brain, available: true },
   { label: "Progress", href: "/progress", icon: LineChart, available: true },
   { label: "Profile", href: "/profile", icon: UserCog, available: false },

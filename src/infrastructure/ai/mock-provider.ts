@@ -254,4 +254,30 @@ const mockResponses: Record<string, (prompt: string) => unknown> = {
       { text: "What's your approach to testing a complex, stateful React feature?", categories: ["react"], difficulty: "senior", questionType: "application" },
     ],
   }),
+
+  "flashcard-suggestor": () => ({
+    suggestions: [
+      {
+        phrase: "I'm running into an issue with…",
+        replacementFor: "I have a problem about…",
+        meaning: "A natural way to introduce a problem you're facing.",
+        example: "I'm running into an issue with slow list rendering.",
+        reason: "natural_alternative",
+      },
+      {
+        phrase: "to give you some context",
+        replacementFor: null,
+        meaning: "Signals you're about to set up background - briefly.",
+        example: "To give you some context, this was a high-traffic dashboard.",
+        reason: "interview_phrase",
+      },
+      {
+        phrase: "the trade-off there was…",
+        replacementFor: null,
+        meaning: "Introduces the cost of a decision - strong senior signal.",
+        example: "The trade-off there was more memory for faster reads.",
+        reason: "useful_phrase",
+      },
+    ],
+  }),
 };

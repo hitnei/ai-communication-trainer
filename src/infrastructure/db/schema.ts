@@ -171,6 +171,46 @@ export const questionFeedback = sqliteTable("question_feedback", {
   createdAt: text("created_at").notNull().default(now),
 });
 
+// Phase 7: flashcards / speaking phrase bank (§53-§57).
+export const flashcards = sqliteTable("flashcards", {
+  id: text("id").primaryKey(),
+  phrase: text("phrase").notNull(),
+  meaning: text("meaning").notNull().default(""),
+  example: text("example").notNull().default(""),
+  notes: text("notes"),
+  tags: text("tags").notNull().default("[]"),
+  state: text("state").notNull().default("new"),
+  ease: real("ease").notNull().default(2.5),
+  intervalDays: integer("interval_days").notNull().default(0),
+  reps: integer("reps").notNull().default(0),
+  lapses: integer("lapses").notNull().default(0),
+  dueAt: text("due_at").notNull().default(now),
+  lastReviewedAt: text("last_reviewed_at"),
+  createdAt: text("created_at").notNull().default(now),
+  updatedAt: text("updated_at").notNull().default(now),
+});
+
+export const flashcardReviews = sqliteTable("flashcard_reviews", {
+  id: text("id").primaryKey(),
+  flashcardId: text("flashcard_id")
+    .notNull()
+    .references(() => flashcards.id, { onDelete: "cascade" }),
+  rating: text("rating").notNull(),
+  reviewedAt: text("reviewed_at").notNull().default(now),
+});
+
+export const phraseSuggestions = sqliteTable("phrase_suggestions", {
+  id: text("id").primaryKey(),
+  phrase: text("phrase").notNull(),
+  replacementFor: text("replacement_for"),
+  meaning: text("meaning").notNull().default(""),
+  example: text("example").notNull().default(""),
+  reason: text("reason").notNull(),
+  source: text("source").notNull().default("ai"),
+  status: text("status").notNull().default("pending"),
+  createdAt: text("created_at").notNull().default(now),
+});
+
 export type ProfileRow = typeof profiles.$inferSelect;
 export type PracticeSessionRow = typeof practiceSessions.$inferSelect;
 export type PracticeAttemptRow = typeof practiceAttempts.$inferSelect;
