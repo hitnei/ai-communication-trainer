@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { getActiveVietnameseSession } from "@/application/practice/vietnamese-coach-service";
 import { getActiveEnglishSession } from "@/application/practice/english-practice-service";
 import { getActiveIndividualInterview } from "@/application/interview/individual-interview-service";
+import { getActiveSimulation } from "@/application/interview/simulation-service";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export default function DashboardPage() {
   const activeSession = getActiveVietnameseSession();
   const activeEnglish = getActiveEnglishSession();
   const activeInterview = getActiveIndividualInterview();
+  const activeSimulation = getActiveSimulation();
 
   return (
     <div className="space-y-8">
@@ -96,6 +98,29 @@ export default function DashboardPage() {
               className={buttonVariants({ size: "sm" })}
             >
               Continue <ArrowRight className="size-4" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeSimulation && (
+        <Card className="border-primary/30 bg-accent/40">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Clock className="size-4 text-primary" />
+              <CardTitle className="text-base">Interview in progress</CardTitle>
+            </div>
+            <CardDescription className="line-clamp-2">
+              {activeSimulation.pendingQuestion ??
+                "Your timed simulation is still open."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href={`/interview/simulation?session=${activeSimulation.id}`}
+              className={buttonVariants({ size: "sm" })}
+            >
+              Resume <ArrowRight className="size-4" />
             </Link>
           </CardContent>
         </Card>

@@ -7,7 +7,10 @@ import type {
   InterviewTurn,
   TurnKind,
 } from "@/domain/interview/types";
-import type { InterviewFeedback } from "@/domain/interview/interview-feedback";
+import type {
+  InterviewFeedback,
+  InterviewReview,
+} from "@/domain/interview/interview-feedback";
 import { ids } from "@/lib/ids";
 
 export interface TurnWithFeedback {
@@ -21,7 +24,9 @@ export const interviewRepository = {
     mode: InterviewSession["mode"];
     categories: string[];
     technologies: string[];
+    interviewType?: string;
     durationMinutes?: number;
+    questionsTarget?: number;
     pendingQuestion?: string;
     pendingKind?: TurnKind;
   }): InterviewSession {
@@ -32,13 +37,33 @@ export const interviewRepository = {
         mode: input.mode,
         categories: JSON.stringify(input.categories),
         technologies: JSON.stringify(input.technologies),
+        interviewType: input.interviewType,
         durationMinutes: input.durationMinutes,
+        questionsTarget: input.questionsTarget,
         pendingQuestion: input.pendingQuestion,
         pendingKind: input.pendingKind,
         status: "active",
       })
       .run();
     return this.getSession(id)!;
+  },
+
+  setReview(sessionId: string, review: InterviewReview) {
+    db.update(interviewSessions)
+      .set({ reviewPayload: JSON.stringify(review) })
+      .where(eq(interviewSessions.id, sessionId))
+      .run();
+  },
+
+  getReview(sessionId: string): InterviewReview | null {
+    const row = db
+      .select()
+      .from(interviewSessions)
+      .where(eq(interviewSessions.id, sessionId))
+      .get();
+    return row?.reviewPayload
+      ? (JSON.parse(row.reviewPayload) as InterviewReview)
+      : null;
   },
 
   setPending(id: string, pendingQuestion: string | null, pendingKind: TurnKind | null) {
@@ -148,7 +173,9 @@ function mapSession(
     mode: row.mode as InterviewSession["mode"],
     categories: safeArray(row.categories),
     technologies: safeArray(row.technologies),
+    interviewType: row.interviewType,
     durationMinutes: row.durationMinutes,
+    questionsTarget: row.questionsTarget,
     status: row.status as InterviewSession["status"],
     pendingQuestion: row.pendingQuestion,
     pendingKind: row.pendingKind as InterviewSession["pendingKind"],

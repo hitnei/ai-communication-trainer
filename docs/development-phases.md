@@ -5,8 +5,8 @@ runnable and green (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`)
 and never replaces a core business rule with simplified behavior (see
 `CLAUDE.md` / `AGENTS.md`).
 
-Phase 0 (Foundation), Phase 1 (Vietnamese Coach), Phase 2 (English voice), and
-Phase 3 (Individual Interview) are **complete and verified**. The remaining
+Phases 0-3 and 3b are **complete and verified**: Foundation, Vietnamese Coach,
+English voice, Individual Interview, and Full Interview Simulation. The remaining
 phases are **planned**; their scope below reflects the infrastructure interfaces,
 schema columns, feedback codes, and skill dimensions that already exist in the
 codebase as seams for the work, but the product logic is **not yet built**.
@@ -17,7 +17,7 @@ codebase as seams for the work, but the product logic is **not yet built**.
 | 1 | Vietnamese Coach (staged coaching loop) | ✅ Complete |
 | 2 | English speaking (voice + transcript) | ✅ Complete |
 | 3 | Interview - Individual practice | ✅ Complete |
-| 3b | Interview - Full simulation | Planned |
+| 3b | Interview - Full simulation | ✅ Complete |
 | 4 | Memory & adaptation | Planned |
 | 5 | Question bank | Planned |
 | 6 | Progress tracking | Planned |
@@ -240,11 +240,34 @@ asks a follow-up built from the candidate's actual answer.
 end, review afterward) is Phase 3b. Depth-dimension scoring over time lands with
 Progress (Phase 6).
 
-## Phase 3b - Interview: Full simulation · Planned
+## Phase 3b - Interview: Full simulation ✅ Complete
 
 **Goal.** A timed end-to-end mock interview where the AI stays strictly in the
 interviewer role (no coaching mid-answer, §32) and delivers a full review only
-at the end. Reuses the interview schema, adding a state machine and duration.
+at the end.
+
+**What was built.**
+- Setup: interview type (recruiter / behavioral / technical / system design /
+  mixed), combinable focus categories, and duration (10/20/30/45 min → a target
+  question count).
+- `simulation-service.ts` state machine: generates the opening question, then on
+  each answer stores the turn (no feedback), asks the next adaptive question, and
+  wraps at the target count - the app decides progression, not the AI (Rule 3).
+- Interviewer AI additions (`interviewer.ts`): `generateNextSimulationQuestion`
+  (asks only, never evaluates, §32) and `reviewSimulation` (`interview-reviewer@1.0`)
+  for the end-of-interview review. Mock fixtures included.
+- Voice answers reuse the recorder + `SpeechProvider`; `POST /api/interview/simulation/answer`.
+- Timed UI with a countdown that auto-finishes at 0, live question progress,
+  answered-questions transcript (no scores shown), and a final review view with a
+  gentle readiness scale (§44, §49) plus recommended practice. Review stored on
+  `interview_sessions.review_payload`.
+
+**Acceptance - met and verified** (e2e test `simulation-service.test.ts` + HTTP
+smoke test):
+- The AI remains an interviewer until the session ends - answers return only the
+  next question, never feedback/score/hint. ✅
+- Adaptive questions build on prior answers; the app wraps at the target. ✅
+- A detailed review is produced only after the interview finishes. ✅
 
 ## Phase 4 - Memory & adaptation · Planned
 

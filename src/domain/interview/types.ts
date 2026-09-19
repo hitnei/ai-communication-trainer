@@ -24,6 +24,30 @@ export const INTERVIEW_CATEGORIES = [
 
 export type InterviewCategoryKey = (typeof INTERVIEW_CATEGORIES)[number]["key"];
 
+/** Full-simulation interview types (§31). */
+export const INTERVIEW_TYPES = [
+  { key: "recruiter", label: "Recruiter screen" },
+  { key: "behavioral", label: "Behavioral" },
+  { key: "technical", label: "Technical" },
+  { key: "system_design", label: "System design" },
+  { key: "mixed", label: "Mixed" },
+] as const;
+
+export type InterviewType = (typeof INTERVIEW_TYPES)[number]["key"];
+
+export const INTERVIEW_TYPE_LABEL: Record<string, string> = Object.fromEntries(
+  INTERVIEW_TYPES.map((t) => [t.key, t.label]),
+);
+
+/** Supported durations in minutes (§31). */
+export const DURATION_OPTIONS = [10, 20, 30, 45] as const;
+
+/** How many questions to aim for in a simulation of the given length. */
+export function questionsTargetForDuration(minutes: number): number {
+  const map: Record<number, number> = { 10: 4, 20: 6, 30: 8, 45: 10 };
+  return map[minutes] ?? Math.max(3, Math.round(minutes / 4));
+}
+
 export const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
   INTERVIEW_CATEGORIES.map((c) => [c.key, c.label]),
 );
@@ -33,7 +57,11 @@ export interface InterviewSession {
   mode: InterviewMode;
   categories: string[];
   technologies: string[];
+  /** Simulation only: the interview type (recruiter/behavioral/...). */
+  interviewType?: string | null;
   durationMinutes?: number | null;
+  /** Simulation only: how many questions to aim for. */
+  questionsTarget?: number | null;
   status: InterviewStatus;
   /** Question awaiting an answer, persisted for resume (§78). */
   pendingQuestion?: string | null;

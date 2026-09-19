@@ -93,7 +93,10 @@ export const interviewSessions = sqliteTable("interview_sessions", {
   mode: text("mode").notNull(), // "individual" | "simulation"
   categories: text("categories").notNull(), // JSON array of category keys
   technologies: text("technologies").notNull().default("[]"), // JSON array
+  interviewType: text("interview_type"), // simulation: recruiter/behavioral/...
   durationMinutes: integer("duration_minutes"),
+  questionsTarget: integer("questions_target"), // simulation: target # of questions
+  reviewPayload: text("review_payload"), // simulation: JSON of the final review
   status: text("status").notNull().default("active"),
   // The question currently awaiting an answer (for resume, §78) and its kind.
   pendingQuestion: text("pending_question"),

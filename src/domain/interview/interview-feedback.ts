@@ -38,5 +38,23 @@ export const interviewQuestionSchema = z.object({
   question: z.string().min(1),
 });
 
+/**
+ * Post-interview review for a FULL simulation (§32). Produced only after the
+ * session ends - the interviewer never shows this mid-interview. Uses a gentle
+ * qualitative readiness scale, not an exam score (§44, §49).
+ */
+export const interviewReviewSchema = z.object({
+  overallSummary: z.string().min(1),
+  readiness: z.enum(["strong", "solid", "developing", "early"]),
+  strengths: z.array(z.string()).default([]),
+  areasToImprove: z.array(interviewIssueSchema).default([]),
+  perQuestion: z
+    .array(z.object({ question: z.string(), note: z.string() }))
+    .default([]),
+  recommendedPractice: z.array(z.string()).default([]),
+  topFocusAreas: z.array(z.string()).default([]),
+});
+
 export type InterviewIssue = z.infer<typeof interviewIssueSchema>;
 export type InterviewFeedback = z.infer<typeof interviewFeedbackSchema>;
+export type InterviewReview = z.infer<typeof interviewReviewSchema>;

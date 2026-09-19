@@ -1,25 +1,25 @@
-import { UsersRound } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { getSimulationState } from "@/application/interview/simulation-service";
+import { StartSimulation } from "@/features/interview/simulation/start-simulation";
+import { SimulationInterview } from "@/features/interview/simulation/simulation-interview";
 
-export default function SimulationPage() {
-  return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Full Interview Simulation
-        </h1>
-        <p className="text-muted-foreground">
-          A timed, end-to-end mock interview.
-        </p>
-      </header>
-      <Card>
-        <CardContent className="flex items-center gap-3 pt-6 text-sm text-muted-foreground">
-          <UsersRound className="size-5 text-primary" />
-          Full simulation (the interviewer stays in role until the end, with a
-          detailed review afterward) arrives in the next phase. For now, use
-          Individual practice to master one question at a time.
-        </CardContent>
-      </Card>
-    </div>
-  );
+export const dynamic = "force-dynamic";
+
+export default async function SimulationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const sessionId = typeof params.session === "string" ? params.session : null;
+
+  if (sessionId) {
+    const state = getSimulationState(sessionId);
+    if (state) {
+      return (
+        <SimulationInterview session={state.session} initialState={state} />
+      );
+    }
+  }
+
+  return <StartSimulation />;
 }

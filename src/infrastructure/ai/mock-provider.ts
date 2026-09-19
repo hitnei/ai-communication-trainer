@@ -187,4 +187,45 @@ const mockResponses: Record<string, (prompt: string) => unknown> = {
       "The answer claimed a performance win (unsupported_claim / missing_metric), so I'm probing for measurement.",
     comparison: null,
   }),
+
+  "interview-next": () => ({
+    question:
+      "Let's go a level deeper - what alternatives did you consider, and why did you rule them out?",
+  }),
+
+  "interview-review": () => ({
+    overallSummary:
+      "You communicate clearly and give concrete examples, but senior signal comes from the reasoning and numbers behind decisions, which were thin here.",
+    readiness: "developing",
+    strengths: [
+      "Clear structure and concrete examples",
+      "Comfortable talking through your work",
+    ],
+    areasToImprove: [
+      {
+        code: "missing_metric",
+        title: "Quantify impact",
+        detail:
+          "Several answers claimed improvements without numbers. Anchor claims with before/after metrics.",
+        evidence: null,
+      },
+      {
+        code: "weak_tradeoff",
+        title: "Name the trade-offs",
+        detail:
+          "Decisions were presented as obviously correct. Show the alternatives and what you gave up.",
+        evidence: null,
+      },
+    ],
+    perQuestion: [
+      {
+        question: "Opening question",
+        note: "Good start; add the measurement you used.",
+      },
+    ],
+    recommendedPractice: [
+      "Practice a 45-second 'decision + trade-off + metric' framing for your top 3 projects.",
+    ],
+    topFocusAreas: ["Quantify impact", "Articulate trade-offs"],
+  }),
 };
