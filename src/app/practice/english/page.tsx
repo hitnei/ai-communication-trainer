@@ -1,23 +1,29 @@
-import { Mic } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { getEnglishSessionState } from "@/application/practice/english-practice-service";
+import { StartEnglish } from "@/features/practice/english/start-english";
+import { EnglishPractice } from "@/features/practice/english/english-practice";
 
-export default function EnglishPracticePage() {
-  return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          English Practice
-        </h1>
-        <p className="text-muted-foreground">Voice-first speaking practice.</p>
-      </header>
-      <Card>
-        <CardContent className="flex items-center gap-3 pt-6 text-sm text-muted-foreground">
-          <Mic className="size-5 text-primary" />
-          Voice recording, transcript, and spoken-English analysis arrive in
-          Phase 2. The architecture (audio + speech provider interfaces) is
-          already in place.
-        </CardContent>
-      </Card>
-    </div>
-  );
+export const dynamic = "force-dynamic";
+
+export default async function EnglishPracticePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const sessionId = typeof params.session === "string" ? params.session : null;
+
+  if (sessionId) {
+    const state = getEnglishSessionState(sessionId);
+    if (state) {
+      return (
+        <EnglishPractice
+          session={state.session}
+          initialAttempts={state.attempts}
+          initialTranscriptMode={state.transcriptMode}
+        />
+      );
+    }
+  }
+
+  return <StartEnglish />;
 }

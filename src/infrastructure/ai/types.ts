@@ -7,9 +7,17 @@ export interface AICallMeta {
   sessionId?: string;
 }
 
+/** Binary media (e.g. audio) sent alongside a prompt for multimodal models. */
+export interface MediaAttachment {
+  mimeType: string;
+  /** Base64-encoded bytes. */
+  data: string;
+}
+
 export interface GenerateTextParams {
   system?: string;
   prompt: string;
+  attachments?: MediaAttachment[];
   temperature?: number;
   maxOutputTokens?: number;
 }
@@ -17,6 +25,7 @@ export interface GenerateTextParams {
 export interface GenerateStructuredParams<T> {
   system?: string;
   prompt: string;
+  attachments?: MediaAttachment[];
   /** Zod schema - the single source of truth for AI output shape (§64). */
   schema: ZodType<T>;
   /** Human-readable name used in repair prompts. */

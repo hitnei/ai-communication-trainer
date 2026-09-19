@@ -62,7 +62,32 @@ export const feedbackItems = sqliteTable("feedback_items", {
   createdAt: text("created_at").notNull().default(now),
 });
 
+// Phase 2: English voice. Audio is stored as local files (§8); this row holds
+// only metadata pointing at the file on disk.
+export const audioRecordings = sqliteTable("audio_recordings", {
+  id: text("id").primaryKey(),
+  relativePath: text("relative_path").notNull(),
+  mimeType: text("mime_type").notNull(),
+  bytes: integer("bytes").notNull(),
+  durationMs: integer("duration_ms"),
+  createdAt: text("created_at").notNull().default(now),
+});
+
+export const transcripts = sqliteTable("transcripts", {
+  id: text("id").primaryKey(),
+  audioRecordingId: text("audio_recording_id").references(
+    () => audioRecordings.id,
+    { onDelete: "set null" },
+  ),
+  text: text("text").notNull(),
+  source: text("source").notNull(), // "browser" | "gemini" | "mock"
+  language: text("language"),
+  createdAt: text("created_at").notNull().default(now),
+});
+
 export type ProfileRow = typeof profiles.$inferSelect;
 export type PracticeSessionRow = typeof practiceSessions.$inferSelect;
 export type PracticeAttemptRow = typeof practiceAttempts.$inferSelect;
 export type FeedbackItemRow = typeof feedbackItems.$inferSelect;
+export type AudioRecordingRow = typeof audioRecordings.$inferSelect;
+export type TranscriptRow = typeof transcripts.$inferSelect;

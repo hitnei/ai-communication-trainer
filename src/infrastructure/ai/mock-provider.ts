@@ -107,4 +107,48 @@ const mockResponses: Record<string, (prompt: string) => unknown> = {
       "Vấn đề chính là API trả về chậm ở màn hình danh sách. Nguyên nhân là mình đang gọi tuần tự nhiều request; mình định gộp lại thành một request để giảm thời gian tải.",
     nextAction: "satisfied_or_retry",
   }),
+
+  "english-coach": () => ({
+    summary:
+      "Your point comes through, but it takes a while to land, and a couple of fillers pull focus.",
+    strengths: ["You gave a concrete cause and a clear next step."],
+    issues: [
+      {
+        category: "content",
+        code: "main_point_late",
+        title: "Main point arrives late",
+        detail:
+          "You open with 'So the main issue is that our list screen loads slowly' but then stack context before the fix.",
+        evidence: "So the main issue is that our list screen loads slowly",
+        naturalness: null,
+      },
+      {
+        category: "english",
+        code: "filler",
+        title: "\"basically\" and \"you know\" as crutches",
+        detail:
+          "A couple of fillers are fine in speech, but here they break the rhythm right before your key point.",
+        evidence: "basically it's because we're making a lot of API calls",
+        naturalness: "context_dependent",
+      },
+    ],
+    topFocusAreas: [
+      "State the problem and the fix in the first sentence",
+      "Trim filler right before your main point",
+    ],
+    // App gates this to attempt 2+; mock always provides it.
+    improvedVersion:
+      "The list screen loads slowly because we make several API calls in sequence. I'd batch them into one request to cut the load time.",
+    comparison: null,
+  }),
+
+  "pronunciation-coach": () => ({
+    assessed: true,
+    intelligibility: "mostly_clear",
+    summary:
+      "You're easy to follow overall. A couple of longer words could be a touch clearer.",
+    flaggedWords: [
+      { word: "sequential", note: "Land each syllable: se-quen-tial." },
+    ],
+  }),
 };

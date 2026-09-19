@@ -10,11 +10,13 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getActiveVietnameseSession } from "@/application/practice/vietnamese-coach-service";
+import { getActiveEnglishSession } from "@/application/practice/english-practice-service";
 
 export const dynamic = "force-dynamic";
 
 export default function DashboardPage() {
   const activeSession = getActiveVietnameseSession();
+  const activeEnglish = getActiveEnglishSession();
 
   return (
     <div className="space-y-8">
@@ -49,6 +51,30 @@ export default function DashboardPage() {
         </Card>
       )}
 
+      {activeEnglish && (
+        <Card className="border-primary/30 bg-accent/40">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Clock className="size-4 text-primary" />
+              <CardTitle className="text-base">
+                Unfinished English session
+              </CardTitle>
+            </div>
+            <CardDescription className="line-clamp-2">
+              {activeEnglish.prompt}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href={`/practice/english?session=${activeEnglish.id}`}
+              className={buttonVariants({ size: "sm" })}
+            >
+              Continue <ArrowRight className="size-4" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground">
           Recommended practice
@@ -74,6 +100,28 @@ export default function DashboardPage() {
               className={buttonVariants()}
             >
               Start practice <ArrowRight className="size-4" />
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="text-base">
+                Say a technical blocker out loud, in English
+              </CardTitle>
+              <Badge variant="muted">≈ 10 min</Badge>
+            </div>
+            <CardDescription>
+              <span className="font-medium text-foreground">Why this? </span>
+              Once the thinking is clear, practice it by voice. You&apos;ll get a
+              transcript plus feedback on clarity, natural English, and
+              pronunciation, then retry.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/practice/english" className={buttonVariants({ variant: "outline" })}>
+              Start speaking <ArrowRight className="size-4" />
             </Link>
           </CardContent>
         </Card>

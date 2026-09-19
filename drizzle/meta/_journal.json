@@ -8,6 +8,13 @@
       "when": 1789793658705,
       "tag": "0000_lowly_kronos",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789797302921,
+      "tag": "0001_glorious_salo",
+      "breakpoints": true
     }
   ]
 }

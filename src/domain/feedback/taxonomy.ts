@@ -42,6 +42,27 @@ export const INTERVIEW_CODES = [
   "missing_metric",
 ] as const;
 
+/** Spoken-English judgement scale (§27) - natural speech is not auto-wrong. */
+export const NATURALNESS_LEVELS = [
+  "natural",
+  "acceptable",
+  "context_dependent",
+  "awkward",
+  "incorrect",
+] as const;
+
+export type NaturalnessLevel = (typeof NATURALNESS_LEVELS)[number];
+
+/** How intelligible the speaker is to an international interviewer (§26). */
+export const INTELLIGIBILITY_LEVELS = [
+  "clear",
+  "mostly_clear",
+  "sometimes_unclear",
+  "hard_to_follow",
+] as const;
+
+export type IntelligibilityLevel = (typeof INTELLIGIBILITY_LEVELS)[number];
+
 export const FEEDBACK_CATEGORIES = [
   "thinking",
   "communication",

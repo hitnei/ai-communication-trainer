@@ -7,7 +7,19 @@ import type {
   AIProvider,
   GenerateStructuredParams,
   GenerateTextParams,
+  MediaAttachment,
 } from "./types";
+
+/** Build Gemini `contents` from a text prompt plus optional media parts. */
+function buildContents(prompt: string, attachments?: MediaAttachment[]) {
+  if (!attachments || attachments.length === 0) return prompt;
+  return [
+    { text: prompt },
+    ...attachments.map((a) => ({
+      inlineData: { mimeType: a.mimeType, data: a.data },
+    })),
+  ];
+}
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -60,7 +72,7 @@ export class GeminiAIProvider implements AIProvider {
       const res = await withRetry(() =>
         this.client.models.generateContent({
           model: this.model,
-          contents: params.prompt,
+          contents: buildContents(params.prompt, params.attachments),
           config: {
             systemInstruction: params.system,
             temperature: params.temperature ?? 0.7,
@@ -105,7 +117,7 @@ export class GeminiAIProvider implements AIProvider {
           const res = await withRetry(() =>
             this.client.models.generateContent({
               model: this.model,
-              contents: prompt,
+              contents: buildContents(prompt, params.attachments),
               config: {
                 systemInstruction: params.system,
                 temperature: params.temperature ?? 0.4,

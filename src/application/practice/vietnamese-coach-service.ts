@@ -144,14 +144,15 @@ export function abandonVietnameseSession(sessionId: string) {
 
 export interface SessionState {
   session: PracticeSession;
-  attempts: AttemptWithFeedback[];
+  attempts: AttemptWithFeedback<VietnameseCoachFeedback>[];
   nextPolicy: CoachingPolicy;
 }
 
 export function getSessionState(sessionId: string): SessionState | null {
   const session = practiceRepository.getSession(sessionId);
   if (!session) return null;
-  const attempts = practiceRepository.listAttempts(sessionId);
+  const attempts =
+    practiceRepository.listAttempts<VietnameseCoachFeedback>(sessionId);
   return {
     session,
     attempts,

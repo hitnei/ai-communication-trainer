@@ -2,30 +2,40 @@ import "server-only";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "../client";
 import {
+  audioRecordings,
   feedbackItems,
   practiceAttempts,
   practiceSessions,
+  transcripts,
 } from "../schema";
 import type {
   PracticeAttempt,
   PracticeSession,
 } from "@/domain/practice/types";
-import type { VietnameseCoachFeedback } from "@/domain/practice/vietnamese-feedback";
 import { ids } from "@/lib/ids";
 
-export interface StoredFeedback {
+/** Stored feedback, generic over the payload shape each role produces. */
+export interface StoredFeedback<T = unknown> {
   id: string;
   attemptId: string;
   role: string;
   promptVersion: string;
   stage: string;
-  feedback: VietnameseCoachFeedback;
+  feedback: T;
   createdAt: string;
 }
 
-export interface AttemptWithFeedback {
+export interface AttemptWithFeedback<T = unknown> {
   attempt: PracticeAttempt;
-  feedback: StoredFeedback | null;
+  feedback: StoredFeedback<T> | null;
+}
+
+export interface StoredAudioRow {
+  id: string;
+  relativePath: string;
+  mimeType: string;
+  bytes: number;
+  durationMs?: number | null;
 }
 
 /** Data access for the practice loop. UI never touches the DB directly (§87). */
@@ -74,27 +84,26 @@ export const practiceRepository = {
       .set({
         status,
         completedAt:
-          status === "completed"
-            ? new Date().toISOString()
-            : undefined,
+          status === "completed" ? new Date().toISOString() : undefined,
       })
       .where(eq(practiceSessions.id, id))
       .run();
   },
 
   countAttempts(sessionId: string): number {
-    const rows = db
+    return db
       .select({ id: practiceAttempts.id })
       .from(practiceAttempts)
       .where(eq(practiceAttempts.sessionId, sessionId))
-      .all();
-    return rows.length;
+      .all().length;
   },
 
   createAttempt(input: {
     sessionId: string;
     attemptNumber: number;
     textAnswer?: string;
+    audioRecordingId?: string;
+    transcriptId?: string;
   }): PracticeAttempt {
     const id = ids.attempt();
     db.insert(practiceAttempts)
@@ -103,6 +112,8 @@ export const practiceRepository = {
         sessionId: input.sessionId,
         attemptNumber: input.attemptNumber,
         textAnswer: input.textAnswer,
+        audioRecordingId: input.audioRecordingId,
+        transcriptId: input.transcriptId,
       })
       .run();
     return mapAttempt(
@@ -110,13 +121,60 @@ export const practiceRepository = {
     );
   },
 
-  saveFeedback(input: {
+  saveAudioRecording(input: {
+    id: string;
+    relativePath: string;
+    mimeType: string;
+    bytes: number;
+    durationMs?: number | null;
+  }): StoredAudioRow {
+    db.insert(audioRecordings)
+      .values({
+        id: input.id,
+        relativePath: input.relativePath,
+        mimeType: input.mimeType,
+        bytes: input.bytes,
+        durationMs: input.durationMs,
+      })
+      .run();
+    return input;
+  },
+
+  getAudioRecording(id: string): StoredAudioRow | null {
+    const row = db
+      .select()
+      .from(audioRecordings)
+      .where(eq(audioRecordings.id, id))
+      .get();
+    return row ?? null;
+  },
+
+  saveTranscript(input: {
+    audioRecordingId?: string;
+    text: string;
+    source: string;
+    language?: string;
+  }): string {
+    const id = ids.transcript();
+    db.insert(transcripts)
+      .values({
+        id,
+        audioRecordingId: input.audioRecordingId,
+        text: input.text,
+        source: input.source,
+        language: input.language,
+      })
+      .run();
+    return id;
+  },
+
+  saveFeedback<T>(input: {
     attemptId: string;
     role: string;
     promptVersion: string;
     stage: string;
-    feedback: VietnameseCoachFeedback;
-  }): StoredFeedback {
+    feedback: T;
+  }): StoredFeedback<T> {
     const id = ids.feedback();
     db.insert(feedbackItems)
       .values({
@@ -143,7 +201,7 @@ export const practiceRepository = {
     };
   },
 
-  listAttempts(sessionId: string): AttemptWithFeedback[] {
+  listAttempts<T = unknown>(sessionId: string): AttemptWithFeedback<T>[] {
     const attempts = db
       .select()
       .from(practiceAttempts)
@@ -168,7 +226,7 @@ export const practiceRepository = {
               role: fb.role,
               promptVersion: fb.promptVersion,
               stage: fb.stage,
-              feedback: JSON.parse(fb.payload) as VietnameseCoachFeedback,
+              feedback: JSON.parse(fb.payload) as T,
               createdAt: fb.createdAt,
             }
           : null,

@@ -41,7 +41,7 @@ export function VietnamesePractice({
   initialAttempts,
 }: {
   session: PracticeSession;
-  initialAttempts: AttemptWithFeedback[];
+  initialAttempts: AttemptWithFeedback<VietnameseCoachFeedback>[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();

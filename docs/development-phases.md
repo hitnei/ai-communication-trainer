@@ -5,17 +5,17 @@ runnable and green (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`)
 and never replaces a core business rule with simplified behavior (see
 `CLAUDE.md` / `AGENTS.md`).
 
-Phase 0 (Foundation) and Phase 1 (Vietnamese Coach) are **complete and
-verified**. Phases 2-9 are **planned**; their scope below reflects the
-infrastructure interfaces, schema columns, feedback codes, and skill dimensions
-that already exist in the codebase as seams for the work, but the product logic
-for those phases is **not yet built**.
+Phase 0 (Foundation), Phase 1 (Vietnamese Coach), and Phase 2 (English voice)
+are **complete and verified**. Phases 3-9 are **planned**; their scope below
+reflects the infrastructure interfaces, schema columns, feedback codes, and skill
+dimensions that already exist in the codebase as seams for the work, but the
+product logic for those phases is **not yet built**.
 
 | Phase | Name | Status |
 | --- | --- | --- |
 | 0 | Foundation | ✅ Complete |
 | 1 | Vietnamese Coach (staged coaching loop) | ✅ Complete |
-| 2 | English speaking (voice + transcript) | Planned |
+| 2 | English speaking (voice + transcript) | ✅ Complete |
 | 3 | Interview mode | Planned |
 | 4 | Memory & adaptation | Planned |
 | 5 | Question bank | Planned |
@@ -165,24 +165,43 @@ the user has done their own thinking.
 
 ---
 
-## Phase 2 - English speaking (voice + transcript) · Planned
+## Phase 2 - English speaking (voice + transcript) ✅ Complete
 
 **Goal.** Add the spoken-English loop: record audio, transcribe, then coach on
 grammar, vocabulary, naturalness, fluency, and fillers - treating **spoken**
 English differently from written, and not auto-flagging natural fillers.
 
-**Seams already present.** `SpeechProvider` (`src/infrastructure/speech/types.ts`),
-`AudioStorage` / `LocalAudioStorage`, `practice_attempts.audioRecordingId` &
-`transcriptId`, `profiles.transcriptMode` (`before`/`after`/etc.), the
-`english`/`pronunciation` feedback codes, and `PracticeMode = "english"`.
+**What was built.**
+- Recording via the MediaRecorder API with permission handling, pause/resume,
+  replay, and delete/re-record (`src/features/practice/english/use-media-recorder.ts`,
+  `audio-recorder.tsx`).
+- Transcript modes (§21): live via the browser Web Speech API
+  (`use-speech-recognition.ts`) or after finishing; preference persisted on
+  `profiles.transcriptMode` and toggled in the UI.
+- Transcription via `SpeechProvider` - `GeminiSpeechProvider` (Gemini audio) with
+  a `MockSpeechProvider` fallback; browser transcript is preferred when present.
+- Analysis runs content/English (`english-coach@1.0`) and pronunciation
+  (`pronunciation-coach@1.0`) **in parallel** (§95); pronunciation is best-effort
+  and degrades to `assessed:false` rather than inventing data (§26).
+- Audio stored as local files (`LocalAudioStorage`), served via
+  `/api/audio/[id]`; upload+analyze via `/api/practice/english/attempt`.
+- Retry with attempt history and previous-vs-current comparison (§25); the
+  improved version is gated to attempt 2+ and enforced server-side (§28).
+- AI provider gained multimodal `attachments` so audio can be sent to Gemini.
 
-**Acceptance criteria (targets).**
-- Record → store audio as a local file (never a DB blob) → transcribe.
-- Transcript shown per the user's `transcriptMode`.
-- English coaching distinguishes spoken vs written and preserves ~80-90% of
-  the user's voice.
-- Natural fillers are not automatically flagged.
-- New English coach role has a tagged `promptVersion`; output Zod-validated.
+**Acceptance - met and verified** (e2e test `english-practice-service.test.ts`,
+HTTP smoke test of record→transcribe→analyze→replay):
+- Record → store audio as a local file (never a DB blob) → transcribe. ✅
+- Transcript shown per the user's `transcriptMode` (live/after). ✅
+- English coaching weighs clarity and grammar equally, distinguishes spoken vs
+  written, and preserves the user's voice. ✅
+- Natural fillers rated on the naturalness scale, not auto-flagged. ✅
+- English + pronunciation roles have tagged `promptVersion`; output Zod-validated;
+  user work preserved on failure. ✅
+
+**Known limitations.** Pronunciation is a coarse intelligibility read (no
+phoneme-level scoring). Live transcript depends on browser Web Speech API
+support (Chrome/Edge/Safari); elsewhere the server transcript is used after stop.
 
 ## Phase 3 - Interview mode · Planned
 
