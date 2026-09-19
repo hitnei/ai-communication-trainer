@@ -21,6 +21,10 @@ import {
 import { profileRepository } from "@/infrastructure/db/repositories/profile-repository";
 import { ids } from "@/lib/ids";
 import { logger } from "@/lib/logger";
+import {
+  buildMemorySummary,
+  extractFromEnglish,
+} from "@/application/memory/memory-service";
 
 /**
  * Application service for the English voice loop (§20-§28).
@@ -159,6 +163,11 @@ export async function submitEnglishAttempt(input: {
         transcript,
         previousTranscript,
         allowImprovedVersion,
+        relevantMemory: buildMemorySummary([
+          "communication_pattern",
+          "english_pattern",
+          "pronunciation_pattern",
+        ]),
         sessionId: input.sessionId,
       }),
       runPronunciationCoach({
@@ -219,6 +228,7 @@ export async function submitEnglishAttempt(input: {
 
 export function completeEnglishSession(sessionId: string) {
   practiceRepository.setSessionStatus(sessionId, "completed");
+  extractFromEnglish(sessionId);
 }
 
 export function abandonEnglishSession(sessionId: string) {

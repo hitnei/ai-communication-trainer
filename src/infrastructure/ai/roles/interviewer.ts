@@ -65,6 +65,7 @@ export interface EvaluateAnswerInput {
   answer: string;
   categories: string[];
   previousAnswer?: string;
+  relevantMemory?: string;
   sessionId?: string;
 }
 
@@ -93,6 +94,7 @@ export async function evaluateInterviewAnswer(
 
   const prompt = buildUserPrompt({
     roleRules: ROLE_RULES,
+    relevantMemory: input.relevantMemory,
     task,
     outputContract: `Return ONLY JSON:
 {

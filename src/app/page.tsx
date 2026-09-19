@@ -13,6 +13,8 @@ import { getActiveVietnameseSession } from "@/application/practice/vietnamese-co
 import { getActiveEnglishSession } from "@/application/practice/english-practice-service";
 import { getActiveIndividualInterview } from "@/application/interview/individual-interview-service";
 import { getActiveSimulation } from "@/application/interview/simulation-service";
+import { listMemories } from "@/application/memory/memory-service";
+import { MEMORY_STATUS_LABEL } from "@/domain/memory/types";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,7 @@ export default function DashboardPage() {
   const activeEnglish = getActiveEnglishSession();
   const activeInterview = getActiveIndividualInterview();
   const activeSimulation = getActiveSimulation();
+  const topFocus = listMemories().find((m) => m.liveStatus !== "stable");
 
   return (
     <div className="space-y-8">
@@ -124,6 +127,34 @@ export default function DashboardPage() {
             </Link>
           </CardContent>
         </Card>
+      )}
+
+      {topFocus && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Your focus right now
+          </h2>
+          <Card className="border-primary/20">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-4">
+                <CardTitle className="text-base">
+                  {topFocus.description}
+                </CardTitle>
+                <Badge variant="muted">
+                  {MEMORY_STATUS_LABEL[topFocus.liveStatus]}
+                </Badge>
+              </div>
+              <CardDescription>
+                Seen across {topFocus.occurrenceCount} session
+                {topFocus.occurrenceCount === 1 ? "" : "s"}. Your coaching now
+                keeps this in mind.{" "}
+                <Link href="/memory" className="underline underline-offset-4">
+                  See why
+                </Link>
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </section>
       )}
 
       <section className="space-y-3">

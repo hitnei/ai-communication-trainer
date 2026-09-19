@@ -5,11 +5,12 @@ runnable and green (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`)
 and never replaces a core business rule with simplified behavior (see
 `CLAUDE.md` / `AGENTS.md`).
 
-Phases 0-3 and 3b are **complete and verified**: Foundation, Vietnamese Coach,
-English voice, Individual Interview, and Full Interview Simulation. The remaining
-phases are **planned**; their scope below reflects the infrastructure interfaces,
-schema columns, feedback codes, and skill dimensions that already exist in the
-codebase as seams for the work, but the product logic is **not yet built**.
+Phases 0-4 are **complete and verified**: Foundation, Vietnamese Coach, English
+voice, Individual Interview, Full Interview Simulation, and Personal Memory. The
+remaining phases are **planned**; their scope below reflects the infrastructure
+interfaces, schema columns, feedback codes, and skill dimensions that already
+exist in the codebase as seams for the work, but the product logic is **not yet
+built**.
 
 | Phase | Name | Status |
 | --- | --- | --- |
@@ -18,7 +19,7 @@ codebase as seams for the work, but the product logic is **not yet built**.
 | 2 | English speaking (voice + transcript) | ✅ Complete |
 | 3 | Interview - Individual practice | ✅ Complete |
 | 3b | Interview - Full simulation | ✅ Complete |
-| 4 | Memory & adaptation | Planned |
+| 4 | Memory & adaptation | ✅ Complete |
 | 5 | Question bank | Planned |
 | 6 | Progress tracking | Planned |
 | 7 | Flashcards & spaced review | Planned |
@@ -269,19 +270,40 @@ smoke test):
 - Adaptive questions build on prior answers; the app wraps at the target. ✅
 - A detailed review is produced only after the interview finishes. ✅
 
-## Phase 4 - Memory & adaptation · Planned
+## Phase 4 - Memory & adaptation ✅ Complete
 
 **Goal.** Remember meaningful patterns across sessions so future practice
 adapts (the "remember → adapt" tail of the core loop).
 
-**Seams already present.** The prompt builder already accepts
-`relevantMemory`; the coach role forwards it; feedback codes/skill dimensions
-give stable keys to aggregate.
+**What was built.**
+- Memory domain (`src/domain/memory/types.ts`): the five memory types (§45), a
+  `CODE_MEMORY` registry mapping feedback codes to a memory type + human
+  description, and the confidence/status lifecycle (candidate → confirmed →
+  improving → stable) derived from occurrence count and recency.
+- DB tables `communication_memories` + `memory_evidence` (§46), with every
+  memory traceable to the sessions it came from.
+- `memory-service.ts`: extraction runs on session completion for all four flows
+  (Vietnamese, English, individual interview, simulation review) and counts **at
+  most one occurrence per session** so a single slip stays a candidate, never a
+  weakness (§47). Retrieval (`getRelevantMemories` / `buildMemorySummary`)
+  returns only the top few relevant patterns as a concise summary (§48).
+- Adaptation: the summary is injected via the existing `relevantMemory` prompt
+  slot into the Vietnamese coach, English coach, and interviewer - so recurring
+  issues shape future coaching.
+- UI: a Memory page to inspect each pattern, expand its evidence, delete one, or
+  clear all (§9); a dashboard "Your focus right now" card; a Memory nav entry.
 
-**Acceptance criteria (targets).**
-- Recurring issues are distilled and stored (new memory table via migration).
-- Relevant memory is injected into prompts (only the minimum needed).
-- Adaptation is observable across sessions; no PII leaves the machine.
+**Acceptance - met and verified** (e2e test `memory-service.test.ts`):
+- A single occurrence stays a candidate; the same issue across 3 sessions becomes
+  a confirmed recurring pattern. ✅
+- Relevant memory is injected into prompts (minimum needed, not full history). ✅
+- Patterns are traceable to sessions, deletable, and never leave the machine. ✅
+- Repeated communication issues demonstrably affect future practice. ✅
+
+**Note on the "MemoryExtractor AI" (§72).** Recurrence detection is deterministic
+(counting distinct sessions per coded issue) rather than an LLM call - this is
+more reliable for "did this recur?" and keeps the weakness decision in the app
+layer (Rule 3). Descriptions come from the `CODE_MEMORY` registry.
 
 ## Phase 5 - Question bank · Planned
 

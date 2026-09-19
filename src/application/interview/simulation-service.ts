@@ -18,6 +18,7 @@ import { interviewRepository } from "@/infrastructure/db/repositories/interview-
 import { practiceRepository } from "@/infrastructure/db/repositories/practice-repository";
 import { ids } from "@/lib/ids";
 import { logger } from "@/lib/logger";
+import { extractFromSimulation } from "@/application/memory/memory-service";
 
 /**
  * Application service for FULL interview simulation (§31, §32).
@@ -236,6 +237,7 @@ export async function finishSimulation(
     });
     interviewRepository.setReview(sessionId, review);
     interviewRepository.setStatus(sessionId, "completed");
+    extractFromSimulation(sessionId);
     return { review };
   } catch (e) {
     const isKnown =

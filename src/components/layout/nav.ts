@@ -8,6 +8,7 @@ import {
   Layers,
   LineChart,
   UserCog,
+  Brain,
 } from "lucide-react";
 
 export interface NavItem {
@@ -44,6 +45,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "Question Bank", href: "/questions", icon: Library, available: false },
   { label: "Flashcards", href: "/flashcards", icon: Layers, available: false },
+  { label: "Memory", href: "/memory", icon: Brain, available: true },
   { label: "Progress", href: "/progress", icon: LineChart, available: false },
   { label: "Profile", href: "/profile", icon: UserCog, available: false },
 ];

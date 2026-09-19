@@ -19,6 +19,10 @@ import {
   type AttemptWithFeedback,
 } from "@/infrastructure/db/repositories/practice-repository";
 import { logger } from "@/lib/logger";
+import {
+  buildMemorySummary,
+  extractFromVietnamese,
+} from "@/application/memory/memory-service";
 
 /**
  * Application service for the Vietnamese coaching loop.
@@ -92,6 +96,7 @@ export async function submitVietnameseAttempt(input: {
       attemptNumber,
       policy,
       previousAnswer: previous,
+      relevantMemory: buildMemorySummary(["communication_pattern"]),
       sessionId: input.sessionId,
     });
 
@@ -133,9 +138,10 @@ export async function submitVietnameseAttempt(input: {
   }
 }
 
-/** "I'm Satisfied" - user controls completion (§18). */
+/** "I'm Satisfied" - user controls completion (§18). Then extract memory (§45). */
 export function completeVietnameseSession(sessionId: string) {
   practiceRepository.setSessionStatus(sessionId, "completed");
+  extractFromVietnamese(sessionId);
 }
 
 export function abandonVietnameseSession(sessionId: string) {

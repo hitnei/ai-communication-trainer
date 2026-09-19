@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
  * SQLite schema (§58). Grows per phase. Phase 0/1 defines the profile and the
@@ -118,6 +118,31 @@ export const interviewTurns = sqliteTable("interview_turns", {
   transcriptId: text("transcript_id"),
   feedbackPayload: text("feedback_payload"), // JSON of InterviewFeedback
   promptVersion: text("prompt_version"),
+  createdAt: text("created_at").notNull().default(now),
+});
+
+// Phase 4: personal memory (§45, §46). Recurring patterns + their evidence.
+export const communicationMemories = sqliteTable("communication_memories", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  key: text("key").notNull(),
+  description: text("description").notNull(),
+  confidence: real("confidence").notNull().default(0),
+  occurrenceCount: integer("occurrence_count").notNull().default(0),
+  status: text("status").notNull().default("candidate"),
+  firstSeenAt: text("first_seen_at").notNull().default(now),
+  lastSeenAt: text("last_seen_at").notNull().default(now),
+});
+
+export const memoryEvidence = sqliteTable("memory_evidence", {
+  id: text("id").primaryKey(),
+  memoryId: text("memory_id")
+    .notNull()
+    .references(() => communicationMemories.id, { onDelete: "cascade" }),
+  sessionId: text("session_id").notNull(),
+  attemptId: text("attempt_id"),
+  evidence: text("evidence").notNull(),
+  source: text("source").notNull(),
   createdAt: text("created_at").notNull().default(now),
 });
 

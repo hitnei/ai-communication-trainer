@@ -19,6 +19,10 @@ import {
 } from "@/infrastructure/db/repositories/interview-repository";
 import { ids } from "@/lib/ids";
 import { logger } from "@/lib/logger";
+import {
+  buildMemorySummary,
+  extractFromInterviewIndividual,
+} from "@/application/memory/memory-service";
 
 /**
  * Application service for INDIVIDUAL interview practice (§30, §33, §34).
@@ -149,6 +153,10 @@ export async function submitInterviewAnswer(input: {
       answer: transcript,
       categories: session.categories,
       previousAnswer,
+      relevantMemory: buildMemorySummary([
+        "interview_pattern",
+        "communication_pattern",
+      ]),
       sessionId: input.sessionId,
     });
 
@@ -200,6 +208,7 @@ export async function submitInterviewAnswer(input: {
 
 export function completeIndividualInterview(sessionId: string) {
   interviewRepository.setStatus(sessionId, "completed");
+  extractFromInterviewIndividual(sessionId);
 }
 
 export function abandonIndividualInterview(sessionId: string) {
