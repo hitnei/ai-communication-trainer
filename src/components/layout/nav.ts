@@ -43,7 +43,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Full Simulation", href: "/interview/simulation" },
     ],
   },
-  { label: "Question Bank", href: "/questions", icon: Library, available: false },
+  { label: "Question Bank", href: "/questions", icon: Library, available: true },
   { label: "Flashcards", href: "/flashcards", icon: Layers, available: false },
   { label: "Memory", href: "/memory", icon: Brain, available: true },
   { label: "Progress", href: "/progress", icon: LineChart, available: false },

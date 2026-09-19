@@ -146,6 +146,31 @@ export const memoryEvidence = sqliteTable("memory_evidence", {
   createdAt: text("created_at").notNull().default(now),
 });
 
+// Phase 5: question bank (§36-§40).
+export const questions = sqliteTable("questions", {
+  id: text("id").primaryKey(),
+  text: text("text").notNull(),
+  categories: text("categories").notNull().default("[]"), // JSON array
+  technologies: text("technologies").notNull().default("[]"), // JSON array
+  difficulty: text("difficulty").notNull().default("senior"),
+  questionType: text("question_type").notNull().default("scenario"),
+  status: text("status").notNull().default("suggested"),
+  source: text("source").notNull().default("ai"),
+  createdAt: text("created_at").notNull().default(now),
+  updatedAt: text("updated_at").notNull().default(now),
+});
+
+// Removal feedback (§40), kept even after the question is deleted so future
+// generation can avoid similar questions.
+export const questionFeedback = sqliteTable("question_feedback", {
+  id: text("id").primaryKey(),
+  questionText: text("question_text").notNull(),
+  reason: text("reason").notNull(),
+  note: text("note"),
+  categories: text("categories").notNull().default("[]"),
+  createdAt: text("created_at").notNull().default(now),
+});
+
 export type ProfileRow = typeof profiles.$inferSelect;
 export type PracticeSessionRow = typeof practiceSessions.$inferSelect;
 export type PracticeAttemptRow = typeof practiceAttempts.$inferSelect;

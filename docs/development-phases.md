@@ -5,12 +5,12 @@ runnable and green (`pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`)
 and never replaces a core business rule with simplified behavior (see
 `CLAUDE.md` / `AGENTS.md`).
 
-Phases 0-4 are **complete and verified**: Foundation, Vietnamese Coach, English
-voice, Individual Interview, Full Interview Simulation, and Personal Memory. The
-remaining phases are **planned**; their scope below reflects the infrastructure
-interfaces, schema columns, feedback codes, and skill dimensions that already
-exist in the codebase as seams for the work, but the product logic is **not yet
-built**.
+Phases 0-5 are **complete and verified**: Foundation, Vietnamese Coach, English
+voice, Individual Interview, Full Interview Simulation, Personal Memory, and the
+Question Bank. The remaining phases are **planned**; their scope below reflects
+the infrastructure interfaces, schema columns, feedback codes, and skill
+dimensions that already exist in the codebase as seams for the work, but the
+product logic is **not yet built**.
 
 | Phase | Name | Status |
 | --- | --- | --- |
@@ -20,7 +20,7 @@ built**.
 | 3 | Interview - Individual practice | ✅ Complete |
 | 3b | Interview - Full simulation | ✅ Complete |
 | 4 | Memory & adaptation | ✅ Complete |
-| 5 | Question bank | Planned |
+| 5 | Question bank | ✅ Complete |
 | 6 | Progress tracking | Planned |
 | 7 | Flashcards & spaced review | Planned |
 | 8 | CV / JD ingestion & tailoring | Planned |
@@ -305,17 +305,37 @@ adapts (the "remember → adapt" tail of the core loop).
 more reliable for "did this recur?" and keeps the weakness decision in the app
 layer (Rule 3). Descriptions come from the `CODE_MEMORY` registry.
 
-## Phase 5 - Question bank · Planned
+## Phase 5 - Question bank ✅ Complete
 
-**Goal.** A reusable bank of prompts/questions across exercise and interview
-types, selectable and progress-aware.
+**Goal.** A personalized bank of interview questions the user builds by
+combining categories, generating in batches, reviewing, and curating.
 
-**Seams already present.** `practice_sessions.questionId`,
-`VIETNAMESE_EXERCISE_TYPES`, `EXERCISE_LABELS`.
+**What was built.**
+- Question domain (`src/domain/question/`): lifecycle statuses
+  (suggested/selected/practicing/weak/improving/mastered), question types,
+  difficulties, removal reasons, a Zod generation schema, and a deterministic
+  near-duplicate detector (`dedup.ts`, token-overlap with light stemming).
+- DB tables `questions` + `question_feedback` (removal reasons persist even after
+  a question is deleted). `question-repository.ts`.
+- `question-generator@1.0` AI role: multi-category, context-aware (target role,
+  weaknesses from memory, existing questions and removed-question feedback to
+  avoid). Mock returns a varied pool so "Generate More" works offline.
+- `question-bank-service.ts` owns generation → **deterministic dedup against
+  existing + removed questions** → review-before-save → add chosen → edit /
+  status / remove-with-reason (Rule 3; the AI only proposes).
+- UI: search + category/status filters, a generation panel that combines
+  categories and shows candidates for review (select which to add, "generate
+  more", dismiss, with a count of near-duplicates filtered), inline edit, status
+  change, and remove-with-reason.
 
-**Acceptance criteria (targets).**
-- Questions stored and referenced by `questionId`.
-- Selection respects mode, exercise type, and (later) difficulty/history.
+**Acceptance - met and verified** (`dedup.test.ts` + `question-bank-service.test.ts`):
+- Multiple categories are selectable and combined in one batch. ✅
+- Generate produces up to 10; near-duplicates are minimized (exact + reworded). ✅
+- The user selects which generated questions to save; nothing auto-saves. ✅
+- Removal reasons are persisted and removed questions don't come back. ✅
+
+**Note.** Automatic status transitions from practice results (practicing → weak →
+improving → mastered) arrive with Progress (Phase 6); status is user-settable now.
 
 ## Phase 6 - Progress tracking · Planned
 

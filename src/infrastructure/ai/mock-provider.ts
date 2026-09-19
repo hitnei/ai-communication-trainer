@@ -228,4 +228,30 @@ const mockResponses: Record<string, (prompt: string) => unknown> = {
     ],
     topFocusAreas: ["Quantify impact", "Articulate trade-offs"],
   }),
+
+  // A varied pool so "Generate More" keeps returning fresh items offline.
+  "question-generator": () => ({
+    questions: [
+      { text: "How would you stop unnecessary re-renders in a large React list, and what are the trade-offs?", categories: ["react", "performance"], difficulty: "senior", questionType: "tradeoff" },
+      { text: "Walk me through migrating a big class-component codebase to hooks safely.", categories: ["react"], difficulty: "senior", questionType: "scenario" },
+      { text: "When do server components help, and when do they add complexity?", categories: ["nextjs"], difficulty: "senior", questionType: "tradeoff" },
+      { text: "Describe how you'd design a caching layer for a data-heavy dashboard.", categories: ["performance", "frontend_architecture"], difficulty: "staff", questionType: "decision" },
+      { text: "How do you decide where state should live in a growing app?", categories: ["state_management"], difficulty: "senior", questionType: "application" },
+      { text: "Tell me about a time you led a risky refactor and how you managed it.", categories: ["leadership", "behavioral"], difficulty: "senior", questionType: "scenario" },
+      { text: "How would you debug a memory leak in a long-running SPA?", categories: ["javascript", "performance"], difficulty: "senior", questionType: "scenario" },
+      { text: "Explain a TypeScript typing decision that improved a team's velocity.", categories: ["typescript"], difficulty: "senior", questionType: "decision" },
+      { text: "Design the frontend for a collaborative editor - where are the hard parts?", categories: ["system_design"], difficulty: "staff", questionType: "scenario" },
+      { text: "How do you keep a Node.js API responsive under a slow dependency?", categories: ["nodejs"], difficulty: "senior", questionType: "application" },
+      { text: "How would you introduce performance budgets without slowing the team?", categories: ["performance", "leadership"], difficulty: "staff", questionType: "decision" },
+      { text: "Describe how you handled disagreement on an architecture decision.", categories: ["behavioral", "frontend_architecture"], difficulty: "senior", questionType: "scenario" },
+      { text: "How do you measure whether a frontend performance change actually helped users?", categories: ["performance"], difficulty: "senior", questionType: "application" },
+      { text: "When would you choose a state machine over ad-hoc component state?", categories: ["state_management"], difficulty: "senior", questionType: "tradeoff" },
+      { text: "Walk me through your approach to accessible, reusable component APIs.", categories: ["react", "frontend_architecture"], difficulty: "senior", questionType: "application" },
+      { text: "How would you roll out a breaking change across many teams' frontends?", categories: ["frontend_architecture", "leadership"], difficulty: "staff", questionType: "scenario" },
+      { text: "Explain how you'd cut initial bundle size on a large Next.js app.", categories: ["nextjs", "performance"], difficulty: "senior", questionType: "application" },
+      { text: "Tell me about mentoring an engineer through a hard technical problem.", categories: ["leadership"], difficulty: "senior", questionType: "scenario" },
+      { text: "How do you reason about error handling and retries on the client?", categories: ["javascript", "frontend_architecture"], difficulty: "senior", questionType: "decision" },
+      { text: "What's your approach to testing a complex, stateful React feature?", categories: ["react"], difficulty: "senior", questionType: "application" },
+    ],
+  }),
 };
