@@ -34,15 +34,32 @@ function isTransient(e: unknown): boolean {
   return typeof status === "number" && [429, 500, 503].includes(status);
 }
 
-/** Retry a call on transient errors with exponential backoff. */
-async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
-  let delay = 800;
+const MAX_BACKOFF_MS = 20_000;
+
+/** Honor the server's suggested `retryDelay` (e.g. "14s") when present. */
+function serverRetryDelayMs(e: unknown): number | null {
+  const msg = e instanceof Error ? e.message : String(e);
+  const m = msg.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/);
+  return m ? Math.round(Number(m[1]) * 1000) : null;
+}
+
+/**
+ * Retry a call on transient errors. Waits for whichever is longer: the server's
+ * suggested `retryDelay` or an exponential backoff. Rate limits on this key can
+ * ask for 10s+, so short fixed backoffs give up far too early.
+ */
+async function withRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
+  let delay = 1000;
   for (let i = 1; ; i++) {
     try {
       return await fn();
     } catch (e) {
       if (i >= attempts || !isTransient(e)) throw e;
-      await sleep(delay);
+      const wait = Math.min(
+        Math.max(delay, serverRetryDelayMs(e) ?? 0),
+        MAX_BACKOFF_MS,
+      );
+      await sleep(wait);
       delay *= 2;
     }
   }
@@ -59,8 +76,15 @@ export class GeminiAIProvider implements AIProvider {
   constructor(
     apiKey: string,
     private readonly model: string,
+    private readonly thinkingBudget = 0,
   ) {
     this.client = new GoogleGenAI({ apiKey });
+  }
+
+  private thinkingConfig() {
+    return this.thinkingBudget > 0
+      ? { thinkingConfig: { thinkingBudget: this.thinkingBudget } }
+      : {};
   }
 
   async generateText(
@@ -77,6 +101,7 @@ export class GeminiAIProvider implements AIProvider {
             systemInstruction: params.system,
             temperature: params.temperature ?? 0.7,
             maxOutputTokens: params.maxOutputTokens,
+            ...this.thinkingConfig(),
           },
         }),
       );
@@ -123,6 +148,7 @@ export class GeminiAIProvider implements AIProvider {
                 temperature: params.temperature ?? 0.4,
                 maxOutputTokens: params.maxOutputTokens,
                 responseMimeType: "application/json",
+                ...this.thinkingConfig(),
               },
             }),
           );

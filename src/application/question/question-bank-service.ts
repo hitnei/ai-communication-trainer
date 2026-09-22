@@ -109,6 +109,10 @@ export function listQuestions(): Question[] {
   return questionRepository.list();
 }
 
+export function getQuestion(id: string): Question | null {
+  return questionRepository.get(id);
+}
+
 export function updateQuestionText(id: string, text: string): void {
   questionRepository.update(id, { text });
 }

@@ -2,7 +2,16 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Plus, Trash2, Pencil, Check, X, Search } from "lucide-react";
+import {
+  Sparkles,
+  Plus,
+  Trash2,
+  Pencil,
+  Check,
+  X,
+  Search,
+  Dumbbell,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -419,14 +428,25 @@ function QuestionRow({ q }: { q: Question }) {
             ))}
           </select>
           {!editing && (
-            <Button
-              size="icon"
-              variant="ghost"
-              aria-label="Edit"
-              onClick={() => setEditing(true)}
-            >
-              <Pencil className="size-4" />
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  router.push(`/practice/vietnamese?questionId=${q.id}`)
+                }
+              >
+                <Dumbbell className="size-4" /> Practice
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Edit"
+                onClick={() => setEditing(true)}
+              >
+                <Pencil className="size-4" />
+              </Button>
+            </>
           )}
           <Button
             size="icon"

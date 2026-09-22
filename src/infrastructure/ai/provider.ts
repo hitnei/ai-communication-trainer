@@ -15,7 +15,11 @@ export function getAIProvider(): AIProvider {
   if (cached) return cached;
   const kind = resolveAiProvider();
   if (kind === "gemini" && env.GEMINI_API_KEY) {
-    cached = new GeminiAIProvider(env.GEMINI_API_KEY, env.GEMINI_MODEL);
+    cached = new GeminiAIProvider(
+      env.GEMINI_API_KEY,
+      env.GEMINI_MODEL,
+      env.GEMINI_THINKING_BUDGET,
+    );
     logger.info("ai_provider_selected", { provider: "gemini", model: env.GEMINI_MODEL });
   } else {
     cached = new MockAIProvider();

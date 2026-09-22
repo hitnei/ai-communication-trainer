@@ -11,6 +11,10 @@ import { z } from "zod";
 const envSchema = z.object({
   GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_MODEL: z.string().min(1).default("gemini-3.6-flash"),
+  // Cap "thinking" tokens per request. This model thinks unbounded by default,
+  // which burns the key's token-per-minute quota and triggers 429s. A moderate
+  // budget keeps reasoning quality while staying under rate limits. 0 disables.
+  GEMINI_THINKING_BUDGET: z.coerce.number().int().min(0).default(512),
   AI_PROVIDER: z.enum(["gemini", "mock", "auto"]).default("auto"),
   DATABASE_PATH: z.string().min(1).default("./.data/app.db"),
   AUDIO_STORAGE_DIR: z.string().min(1).default("./.data/audio"),

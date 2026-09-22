@@ -16,12 +16,18 @@ import {
 import { VIETNAMESE_PROMPTS } from "@/domain/practice/vietnamese-prompts";
 import { startSessionAction } from "@/app/practice/vietnamese/actions";
 
-export function StartPractice() {
+export function StartPractice({
+  seededQuestion,
+}: {
+  seededQuestion?: { id: string; text: string };
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [exerciseType, setExerciseType] =
     useState<VietnameseExerciseType>("explain_problem");
-  const [prompt, setPrompt] = useState(VIETNAMESE_PROMPTS.explain_problem[0]);
+  const [prompt, setPrompt] = useState(
+    seededQuestion?.text ?? VIETNAMESE_PROMPTS.explain_problem[0],
+  );
   const [error, setError] = useState<string | null>(null);
 
   function selectType(type: VietnameseExerciseType) {
@@ -39,7 +45,11 @@ export function StartPractice() {
     setError(null);
     startTransition(async () => {
       try {
-        const { sessionId } = await startSessionAction({ exerciseType, prompt });
+        const { sessionId } = await startSessionAction({
+          exerciseType,
+          prompt,
+          questionId: seededQuestion?.id,
+        });
         router.push(`/practice/vietnamese?session=${sessionId}`);
       } catch {
         setError("Couldn't start the session. Please try again.");
@@ -98,6 +108,11 @@ export function StartPractice() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {seededQuestion && (
+            <p className="text-xs text-muted-foreground">
+              Loaded from your Question Bank. Edit it if you like.
+            </p>
+          )}
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
