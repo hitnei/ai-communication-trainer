@@ -16,12 +16,18 @@ import {
 import { ENGLISH_PROMPTS } from "@/domain/practice/english-prompts";
 import { startEnglishSessionAction } from "@/app/practice/english/actions";
 
-export function StartEnglish() {
+export function StartEnglish({
+  seed,
+}: {
+  seed?: { text: string; questionId?: string };
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [exerciseType, setExerciseType] =
     useState<VietnameseExerciseType>("explain_problem");
-  const [prompt, setPrompt] = useState(ENGLISH_PROMPTS.explain_problem[0]);
+  const [prompt, setPrompt] = useState(
+    seed?.text ?? ENGLISH_PROMPTS.explain_problem[0],
+  );
   const [error, setError] = useState<string | null>(null);
 
   function selectType(type: VietnameseExerciseType) {
@@ -42,6 +48,7 @@ export function StartEnglish() {
         const { sessionId } = await startEnglishSessionAction({
           exerciseType,
           prompt,
+          questionId: seed?.questionId,
         });
         router.push(`/practice/english?session=${sessionId}`);
       } catch {
@@ -100,6 +107,11 @@ export function StartEnglish() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {seed && (
+            <p className="text-xs text-muted-foreground">
+              Same prompt you worked on - now say it out loud in English.
+            </p>
+          )}
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}

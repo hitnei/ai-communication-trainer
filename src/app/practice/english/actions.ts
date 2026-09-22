@@ -14,6 +14,7 @@ const startSchema = z.object({
   exerciseType: z.enum(VIETNAMESE_EXERCISE_TYPES).optional(),
   prompt: z.string().min(1, "Please provide a prompt to answer."),
   goal: z.string().default("Speak clearly and naturally"),
+  questionId: z.string().optional(),
 });
 
 export async function startEnglishSessionAction(

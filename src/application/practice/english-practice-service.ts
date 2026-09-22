@@ -41,6 +41,7 @@ export interface StartEnglishSessionInput {
   exerciseType?: VietnameseExerciseType;
   prompt: string;
   goal: string;
+  questionId?: string;
 }
 
 export function startEnglishSession(
@@ -51,6 +52,7 @@ export function startEnglishSession(
     goal: input.goal,
     exerciseType: input.exerciseType,
     prompt: input.prompt,
+    questionId: input.questionId,
   });
 }
 

@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, RotateCcw, Send, AlertTriangle } from "lucide-react";
+import { CheckCircle2, RotateCcw, Send, AlertTriangle, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -64,6 +64,10 @@ export function VietnamesePractice({
     () => coachingPolicyForAttempt(nextAttemptNumber),
     [nextAttemptNumber],
   );
+
+  const englishHref = session.questionId
+    ? `/practice/english?questionId=${session.questionId}`
+    : `/practice/english?prompt=${encodeURIComponent(session.prompt)}`;
 
   function submit() {
     if (!answer.trim()) return;
@@ -182,14 +186,20 @@ export function VietnamesePractice({
 
       {completed ? (
         <Card className="border-success/40 bg-success/5">
-          <CardContent className="flex items-center gap-3 pt-6 text-sm">
-            <CheckCircle2 className="size-5 text-success" />
-            <div>
-              <p className="font-medium">Session complete</p>
-              <p className="text-muted-foreground">
-                Nice work. You decided when this was good enough.
-              </p>
+          <CardContent className="space-y-4 pt-6 text-sm">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="size-5 text-success" />
+              <div>
+                <p className="font-medium">Session complete</p>
+                <p className="text-muted-foreground">
+                  Nice work. You decided when this was good enough. Now try
+                  saying it out loud in English.
+                </p>
+              </div>
             </div>
+            <Button onClick={() => router.push(englishHref)}>
+              <Mic className="size-4" /> Practice this in English
+            </Button>
           </CardContent>
         </Card>
       ) : (
