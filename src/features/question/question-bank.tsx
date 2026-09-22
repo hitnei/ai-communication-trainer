@@ -32,6 +32,14 @@ import {
 const selectCls =
   "h-8 rounded-md border border-input bg-background px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+function matchesCategory(categories: string[], filterKey: string): boolean {
+  const label = CATEGORY_LABEL[filterKey]?.toLowerCase();
+  return categories.some((c) => {
+    const v = c.toLowerCase();
+    return v === filterKey || v === label;
+  });
+}
+
 export function QuestionBank({ initial }: { initial: Question[] }) {
   const router = useRouter();
   const [showGenerate, setShowGenerate] = useState(initial.length === 0);
@@ -43,7 +51,8 @@ export function QuestionBank({ initial }: { initial: Question[] }) {
     return initial.filter((q) => {
       if (search && !q.text.toLowerCase().includes(search.toLowerCase()))
         return false;
-      if (filterCategory && !q.categories.includes(filterCategory)) return false;
+      if (filterCategory && !matchesCategory(q.categories, filterCategory))
+        return false;
       if (filterStatus && q.status !== filterStatus) return false;
       return true;
     });
@@ -53,7 +62,9 @@ export function QuestionBank({ initial }: { initial: Question[] }) {
     <div className="space-y-6">
       <header className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Question Bank</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Question Bank
+          </h1>
           <p className="text-muted-foreground">
             Build a personalized set of interview questions. Combine categories,
             generate in batches, and keep only the ones worth practicing.
@@ -131,7 +142,10 @@ export function QuestionBank({ initial }: { initial: Question[] }) {
 
 function GeneratePanel({ onAdded }: { onAdded: () => void }) {
   const [, startTransition] = useTransition();
-  const [categories, setCategories] = useState<string[]>(["react", "behavioral"]);
+  const [categories, setCategories] = useState<string[]>([
+    "react",
+    "behavioral",
+  ]);
   const [difficulty, setDifficulty] = useState<Difficulty>("senior");
   const [count, setCount] = useState(10);
   const [generating, setGenerating] = useState(false);
@@ -141,7 +155,7 @@ function GeneratePanel({ onAdded }: { onAdded: () => void }) {
 
   function toggleCat(key: string) {
     setCategories((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   }
 
@@ -183,7 +197,7 @@ function GeneratePanel({ onAdded }: { onAdded: () => void }) {
                 "rounded-full border px-3 py-1.5 text-sm transition-colors",
                 categories.includes(c.key)
                   ? "border-primary bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
               {c.label}
@@ -248,7 +262,9 @@ function GeneratePanel({ onAdded }: { onAdded: () => void }) {
                 {result.candidates.length} to review · select the ones to keep
               </span>
               {result.duplicatesFiltered > 0 && (
-                <span>{result.duplicatesFiltered} near-duplicate(s) filtered</span>
+                <span>
+                  {result.duplicatesFiltered} near-duplicate(s) filtered
+                </span>
               )}
             </div>
 
@@ -294,7 +310,11 @@ function GeneratePanel({ onAdded }: { onAdded: () => void }) {
             )}
 
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={add} disabled={adding || checked.size === 0}>
+              <Button
+                size="sm"
+                onClick={add}
+                disabled={adding || checked.size === 0}
+              >
                 {adding ? (
                   <>
                     <Spinner /> Adding…
