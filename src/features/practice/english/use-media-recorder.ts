@@ -57,7 +57,6 @@ export function useMediaRecorder(): UseMediaRecorder {
     emptySubscribe,
     () =>
       typeof navigator !== "undefined" &&
-      !!navigator.mediaDevices &&
       typeof MediaRecorder !== "undefined",
     () => true,
   );
@@ -91,6 +90,14 @@ export function useMediaRecorder(): UseMediaRecorder {
       setError("Recording isn't supported in this browser.");
       return;
     }
+    // getUserMedia exists only in a secure context (HTTPS/localhost); over a LAN
+    // IP the permission popup can never appear.
+    if (!navigator.mediaDevices?.getUserMedia || !window.isSecureContext) {
+      setError(
+        "Your browser blocks microphone access on this URL. Open the app at http://localhost:3000 (not an IP address) or over HTTPS, then try again.",
+      );
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -119,10 +126,51 @@ export function useMediaRecorder(): UseMediaRecorder {
       timerRef.current = setInterval(() => {
         setDurationMs(accumulatedRef.current + (Date.now() - startedAtRef.current));
       }, 200);
-    } catch {
-      setError(
-        "I couldn't access your microphone. Check the browser permission and try again.",
-      );
+    } catch (e) {
+      const name = e instanceof DOMException ? e.name : "";
+      let permState = "unknown";
+      try {
+        permState = (
+          await navigator.permissions.query({
+            name: "microphone" as PermissionName,
+          })
+        ).state;
+      } catch {}
+      let audioInputs = -1;
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        audioInputs = devices.filter((d) => d.kind === "audioinput").length;
+      } catch {}
+      console.error("getUserMedia failed", {
+        name,
+        message: e instanceof Error ? e.message : String(e),
+        permState,
+        audioInputs,
+        inIframe: window.self !== window.top,
+        isSecureContext: window.isSecureContext,
+        origin: window.location.origin,
+        userAgent: navigator.userAgent,
+      });
+      const inIframe = window.self !== window.top;
+      if ((name === "NotAllowedError" || name === "SecurityError") && inIframe) {
+        setError(
+          "This looks like an embedded browser (e.g. VS Code's Simple Browser), which blocks the microphone. Open the app in a real browser tab at http://localhost:3000 and try again.",
+        );
+      } else if (name === "NotAllowedError" || name === "SecurityError") {
+        setError(
+          "Microphone access was denied. If you already allowed it for this site, the block is at the OS level: enable your browser in macOS System Settings > Privacy & Security > Microphone, then fully quit and reopen the browser (a page reload isn't enough).",
+        );
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        setError("No microphone was found. Plug one in and try again.");
+      } else if (name === "NotReadableError") {
+        setError(
+          "Your microphone is in use by another app. Close it and try again.",
+        );
+      } else {
+        setError(
+          "I couldn't access your microphone. Check the browser permission and try again.",
+        );
+      }
       setState("idle");
     }
   }, [isSupported, mimeType]);
