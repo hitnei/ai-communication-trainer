@@ -350,6 +350,38 @@ glob.
 
 ---
 
+## 7.5 Live eval harness (implemented)
+
+Finding: the mock returns the same canned output for every input, so golden
+cases run on the mock can only prove policy and schema, never prompt quality.
+Judgment is therefore measured against **live Gemini**, opt-in, using only
+deterministic checks (no judge model).
+
+- `pnpm eval` runs `test/eval/coach.eval.ts` (config: `vitest.eval.config.mts`,
+  loads `.env.local`, skipped when the provider is the mock).
+- Datasets: `test/eval/vietnamese-cases.ts` (12) and
+  `test/eval/english-cases.ts` (12).
+- Checks live in `test/eval/checks.ts` and are unit-tested offline in
+  `test/eval/checks.test.ts` (part of `pnpm test`): category/code consistency,
+  no rewrite before attempt 3, response language, evidence is a real quote,
+  natural fillers not over-corrected, voice overlap, comparison gating.
+- Output is a per-role pass-rate compared with `test/eval/baseline.json`, with
+  regressions, fixes and a verdict (better / worse / same).
+- Workflow for a prompt change: bump `promptVersion`, run `pnpm eval`, read the
+  verdict; if it is better or intentionally same, record it with
+  `EVAL_UPDATE_BASELINE=1 pnpm eval`.
+- Free tier allows 5 requests/minute, so calls are paced (`EVAL_RPM`, default
+  5; the full set takes about 5 minutes). Infra errors are reported as
+  INCOMPLETE, excluded from the pass-rate, and never written to the baseline.
+- The free tier also caps requests per day per model (observed: 20). The full
+  set is 24 calls, so run one role per day (`EVAL_ROLE=vietnamese-coach pnpm
+  eval`) or set a model/key with a larger quota. On HTTP 429 the run stops
+  immediately and reports INCOMPLETE.
+- Single run per case, so a one-case flip can be model noise; judge by the
+  trend across cases, not one case.
+
+---
+
 ## 8. Current test coverage (implemented)
 
 | File | Category | What it asserts |

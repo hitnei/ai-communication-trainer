@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { AIProviderError } from "@/infrastructure/ai/errors";
 import type { CvExtraction } from "@/domain/profile/schema";
 import type { ProjectInput } from "@/domain/profile/types";
 import {
@@ -37,14 +38,30 @@ export async function updateProfileAction(
   revalidatePath("/profile");
 }
 
-export async function extractCvAction(text: string): Promise<
+function aiFailureMessage(e: unknown, fallback: string): string {
+  const detail = e instanceof AIProviderError ? String(e.cause) : "";
+  if (/RESOURCE_EXHAUSTED|"code"\s*:\s*429/.test(detail)) {
+    return "The AI quota is used up for now. Try again later or switch to a different model/key.";
+  }
+  if (/UNAVAILABLE|"code"\s*:\s*503/.test(detail)) {
+    return "The AI model is overloaded right now. Please try again in a moment.";
+  }
+  return fallback;
+}
+
+export async function extractCvAction(
+  text: string,
+): Promise<
   { ok: true; extraction: CvExtraction } | { ok: false; message: string }
 > {
   try {
     const extraction = await extractCvForReview(z.string().min(1).parse(text));
     return { ok: true, extraction };
-  } catch {
-    return { ok: false, message: "Couldn't read that CV. Please try again." };
+  } catch (e) {
+    return {
+      ok: false,
+      message: aiFailureMessage(e, "Couldn't read that CV. Please try again."),
+    };
   }
 }
 
@@ -78,8 +95,11 @@ export async function analyzeJdAction(
     const jd = await analyzeAndSaveJd(z.string().min(1).parse(text));
     revalidatePath("/profile");
     return { ok: true, id: jd.id };
-  } catch {
-    return { ok: false, message: "Couldn't analyze that job description." };
+  } catch (e) {
+    return {
+      ok: false,
+      message: aiFailureMessage(e, "Couldn't analyze that job description."),
+    };
   }
 }
 
@@ -90,8 +110,15 @@ export async function deleteJdAction(id: string): Promise<void> {
 
 export async function generateJobTrackAction(
   id: string,
-): Promise<{ added: number }> {
-  const r = await generateJobTrack(id);
-  revalidatePath("/questions");
-  return r;
+): Promise<{ ok: true; added: number } | { ok: false; message: string }> {
+  try {
+    const r = await generateJobTrack(id);
+    revalidatePath("/questions");
+    return { ok: true, added: r.added };
+  } catch (e) {
+    return {
+      ok: false,
+      message: aiFailureMessage(e, "Couldn't generate the interview track."),
+    };
+  }
 }

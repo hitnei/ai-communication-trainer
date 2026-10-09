@@ -54,9 +54,11 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
     try {
       return await fn();
     } catch (e) {
+      const serverDelay = serverRetryDelayMs(e);
       if (i >= attempts || !isTransient(e)) throw e;
+      if (serverDelay !== null && serverDelay > MAX_BACKOFF_MS) throw e;
       const wait = Math.min(
-        Math.max(delay, serverRetryDelayMs(e) ?? 0),
+        Math.max(delay, serverDelay ?? 0),
         MAX_BACKOFF_MS,
       );
       await sleep(wait);

@@ -84,6 +84,7 @@ export function JobDescriptions({ jds }: { jds: JdWithRequirements[] }) {
   function JdCard({ item }: { item: JdWithRequirements }) {
     const [open, setOpen] = useState(false);
     const [trackMsg, setTrackMsg] = useState<string | null>(null);
+    const [trackError, setTrackError] = useState<string | null>(null);
     const { jd, requirements } = item;
 
     return (
@@ -133,6 +134,11 @@ export function JobDescriptions({ jds }: { jds: JdWithRequirements[] }) {
               onClick={() =>
                 startTransition(async () => {
                   const r = await generateJobTrackAction(jd.id);
+                  if (!r.ok) {
+                    setTrackError(r.message);
+                    return;
+                  }
+                  setTrackError(null);
                   setTrackMsg(`Added ${r.added} tailored question${r.added === 1 ? "" : "s"} to your bank.`);
                   router.refresh();
                 })
@@ -141,6 +147,7 @@ export function JobDescriptions({ jds }: { jds: JdWithRequirements[] }) {
               <ListChecks className="size-4" /> Generate interview track
             </Button>
             {trackMsg && <span className="text-xs text-success">{trackMsg}</span>}
+            {trackError && <span className="text-xs text-destructive">{trackError}</span>}
           </div>
 
           {open && requirements.length > 0 && (
