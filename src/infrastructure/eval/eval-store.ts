@@ -6,7 +6,14 @@ import type { EvalRole, RoleReport, RunRecord } from "@/domain/eval/types";
 const DIR = path.resolve(process.cwd(), ".data", "eval");
 const BASELINE_FILE = path.join(DIR, "baseline.json");
 
-function latestFile(role: EvalRole): string {
+/** Shape of the single "latest" file written before run history existed. */
+export type LegacyRun = Omit<RunRecord, "id" | "prompt" | "note">;
+
+function historyFile(role: EvalRole): string {
+  return path.join(DIR, `history-${role}.json`);
+}
+
+function legacyFile(role: EvalRole): string {
   return path.join(DIR, `latest-${role}.json`);
 }
 
@@ -25,8 +32,11 @@ function writeJson(file: string, value: unknown): void {
 }
 
 export const evalStore = {
-  readLatest: (role: EvalRole) => readJson<RunRecord>(latestFile(role)),
-  writeLatest: (record: RunRecord) => writeJson(latestFile(record.role), record),
+  readHistory: (role: EvalRole): RunRecord[] =>
+    readJson<RunRecord[]>(historyFile(role)) ?? [],
+  writeHistory: (role: EvalRole, runs: RunRecord[]) =>
+    writeJson(historyFile(role), runs),
+  readLegacyLatest: (role: EvalRole) => readJson<LegacyRun>(legacyFile(role)),
   readBaseline: (role: EvalRole): RoleReport | null =>
     readJson<Record<string, RoleReport>>(BASELINE_FILE)?.[role] ?? null,
   writeBaseline: (report: RoleReport) => {

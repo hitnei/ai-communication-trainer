@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import { coachingPolicyForAttempt } from "@/domain/practice/coaching-stage";
 import { estimateCost, type CostEstimate } from "@/domain/eval/cost";
 import {
@@ -9,6 +10,7 @@ import {
 } from "@/domain/eval/checks";
 import { englishCases } from "@/domain/eval/english-cases";
 import { vietnameseCases } from "@/domain/eval/vietnamese-cases";
+import { makeSnapshot } from "@/domain/eval/prompt-snapshot";
 import {
   compare,
   errorOutcome,
@@ -22,6 +24,8 @@ import {
   type CheckResult,
   type EvalRole,
   type ObservedFeedback,
+  type PromptSection,
+  type PromptSnapshot,
   type RoleReport,
   type RunRecord,
 } from "@/domain/eval/types";
@@ -113,6 +117,130 @@ function definitionFor(role: EvalRole): RoleDefinition {
   };
 }
 
+class PromptCaptured extends Error {
+  constructor(
+    readonly system: string,
+    readonly prompt: string,
+  ) {
+    super("prompt captured");
+  }
+}
+
+const capturingProvider: AIProvider = {
+  name: "capture",
+  generateText: async () => "",
+  generateStructured: async (params) => {
+    throw new PromptCaptured(params.system ?? "", params.prompt);
+  },
+};
+
+async function renderPrompt(
+  run: (provider: AIProvider) => Promise<unknown>,
+): Promise<PromptCaptured> {
+  try {
+    await run(capturingProvider);
+  } catch (error) {
+    if (error instanceof PromptCaptured) return error;
+    throw error;
+  }
+  throw new Error("Prompt was not captured.");
+}
+
+const PLACEHOLDERS = {
+  prompt: "{{QUESTION}}",
+  answer: "{{ANSWER}}",
+  previous: "{{PREVIOUS_ANSWER}}",
+};
+
+/** Renders the real prompt with placeholder inputs. Makes no API call. */
+async function capturePromptSnapshot(role: EvalRole): Promise<PromptSnapshot> {
+  const variants: { label: string; captured: PromptCaptured }[] = [];
+  if (role === "vietnamese-coach") {
+    for (const attempt of [1, 2, 3]) {
+      variants.push({
+        label: `Task, attempt ${attempt}`,
+        captured: await renderPrompt((provider) =>
+          runVietnameseCoach(
+            {
+              prompt: PLACEHOLDERS.prompt,
+              answer: PLACEHOLDERS.answer,
+              previousAnswer: attempt > 1 ? PLACEHOLDERS.previous : undefined,
+              attemptNumber: attempt,
+              policy: coachingPolicyForAttempt(attempt),
+            },
+            provider,
+          ),
+        ),
+      });
+    }
+  } else {
+    for (const withPrevious of [false, true]) {
+      variants.push({
+        label: withPrevious
+          ? "Task, improved version allowed, previous attempt"
+          : "Task, improved version withheld, first attempt",
+        captured: await renderPrompt((provider) =>
+          runEnglishCoach(
+            {
+              prompt: PLACEHOLDERS.prompt,
+              transcript: PLACEHOLDERS.answer,
+              previousTranscript: withPrevious ? PLACEHOLDERS.previous : undefined,
+              allowImprovedVersion: withPrevious,
+            },
+            provider,
+          ),
+        ),
+      });
+    }
+  }
+
+  const split = (prompt: string) => {
+    const at = prompt.indexOf("\n\n# Output\n");
+    return at < 0
+      ? { task: prompt, output: "" }
+      : { task: prompt.slice(0, at), output: prompt.slice(at + "\n\n# Output\n".length) };
+  };
+  const first = variants[0].captured;
+  const sections: PromptSection[] = [
+    { title: "System (global rules + role rules)", text: first.system },
+    { title: "Output contract", text: split(first.prompt).output },
+    ...variants.map((v) => ({ title: v.label, text: split(v.captured.prompt).task })),
+  ];
+  return makeSnapshot(sections);
+}
+
+function byTime(a: RunRecord, b: RunRecord): number {
+  return a.finishedAt.localeCompare(b.finishedAt);
+}
+
+async function loadHistory(role: EvalRole): Promise<RunRecord[]> {
+  const stored = evalStore.readHistory(role);
+  if (stored.length > 0) return [...stored].sort(byTime);
+
+  const legacy = evalStore.readLegacyLatest(role);
+  if (!legacy) return [];
+
+  const seeded: RunRecord = {
+    ...legacy,
+    id: `legacy-${legacy.finishedAt}`,
+    prompt: await capturePromptSnapshot(role),
+    note: "",
+    backfilled: true,
+  };
+  evalStore.writeHistory(role, [seeded]);
+
+  const baseline = evalStore.readBaseline(role);
+  if (
+    baseline &&
+    !baseline.runId &&
+    baseline.promptVersion === seeded.promptVersion &&
+    JSON.stringify(baseline.cases) === JSON.stringify(seeded.report.cases)
+  ) {
+    evalStore.writeBaseline({ ...baseline, runId: seeded.id });
+  }
+  return [seeded];
+}
+
 function assertDevOnly(): void {
   if (process.env.NODE_ENV === "production") {
     throw new EvalGuardError("The eval harness is disabled in production.");
@@ -127,6 +255,8 @@ export interface EvalRoleOverview {
   latest: RunRecord | null;
   baseline: RoleReport | null;
   comparison: Comparison | null;
+  /** The prompt in code differs from the one the latest run measured. */
+  promptChangedSinceLastRun: boolean;
 }
 
 export interface EvalOverview {
@@ -136,17 +266,16 @@ export interface EvalOverview {
   roles: EvalRoleOverview[];
 }
 
-export function getEvalOverview(): EvalOverview {
+export async function getEvalOverview(): Promise<EvalOverview> {
   assertDevOnly();
   const provider = getAIProvider();
-  return {
-    provider: provider.name,
-    model: env.GEMINI_MODEL,
-    canRun: provider.name === "gemini",
-    roles: EVAL_ROLES.map((role) => {
+  const roles = await Promise.all(
+    EVAL_ROLES.map(async (role): Promise<EvalRoleOverview> => {
       const def = definitionFor(role);
-      const latest = evalStore.readLatest(role);
+      const history = await loadHistory(role);
+      const latest = history.at(-1) ?? null;
       const baseline = evalStore.readBaseline(role);
+      const current = latest ? await capturePromptSnapshot(role) : null;
       return {
         role,
         promptVersion: def.promptVersion,
@@ -155,9 +284,38 @@ export function getEvalOverview(): EvalOverview {
         latest,
         baseline,
         comparison: latest ? compare(latest.report, baseline) : null,
+        promptChangedSinceLastRun:
+          latest !== null && current !== null && current.hash !== latest.prompt.hash,
       };
     }),
+  );
+  return {
+    provider: provider.name,
+    model: env.GEMINI_MODEL,
+    canRun: provider.name === "gemini",
+    roles,
   };
+}
+
+export interface EvalHistoryRole {
+  role: EvalRole;
+  runs: RunRecord[];
+  baselineRunId: string | null;
+  currentPrompt: PromptSnapshot;
+  currentVersion: string;
+}
+
+export async function getEvalHistory(): Promise<EvalHistoryRole[]> {
+  assertDevOnly();
+  return Promise.all(
+    EVAL_ROLES.map(async (role) => ({
+      role,
+      runs: await loadHistory(role),
+      baselineRunId: evalStore.readBaseline(role)?.runId ?? null,
+      currentPrompt: await capturePromptSnapshot(role),
+      currentVersion: definitionFor(role).promptVersion,
+    })),
+  );
 }
 
 const inFlight = new Set<EvalRole>();
@@ -187,6 +345,8 @@ export async function runEval(
   inFlight.add(role);
   try {
     const def = definitionFor(role);
+    const prompt = await capturePromptSnapshot(role);
+    const history = await loadHistory(role);
     const pace = createPacer(env.EVAL_RPM);
     const startedAt = new Date().toISOString();
     let quotaExhausted = false;
@@ -211,31 +371,54 @@ export async function runEval(
     );
 
     const record: RunRecord = {
+      id: randomUUID(),
       role,
       promptVersion: def.promptVersion,
       model: env.GEMINI_MODEL,
       startedAt,
       finishedAt: new Date().toISOString(),
       aborted: quotaExhausted,
+      prompt,
+      note: "",
       report: summarize(role, def.promptVersion, outcomes),
       outcomes,
     };
-    evalStore.writeLatest(record);
+    evalStore.writeHistory(role, [...history, record]);
     return record;
   } finally {
     inFlight.delete(role);
   }
 }
 
-export function setBaselineFromLatest(role: EvalRole): RoleReport {
+export async function setBaselineFromLatest(role: EvalRole): Promise<RoleReport> {
   assertDevOnly();
-  const latest = evalStore.readLatest(role);
+  const latest = (await loadHistory(role)).at(-1);
   if (!latest) throw new EvalGuardError("No run to use as a baseline yet.");
   if (latest.report.errors > 0) {
     throw new EvalGuardError(
       "The latest run had infrastructure errors; a partial run cannot be a baseline.",
     );
   }
-  evalStore.writeBaseline(latest.report);
-  return latest.report;
+  const report: RoleReport = { ...latest.report, runId: latest.id };
+  evalStore.writeBaseline(report);
+  return report;
+}
+
+const MAX_NOTE_LENGTH = 2_000;
+
+export async function updateRunNote(
+  role: EvalRole,
+  runId: string,
+  note: string,
+): Promise<RunRecord> {
+  assertDevOnly();
+  const history = await loadHistory(role);
+  const target = history.find((r) => r.id === runId);
+  if (!target) throw new EvalGuardError("Run not found.");
+  const updated: RunRecord = { ...target, note: note.slice(0, MAX_NOTE_LENGTH) };
+  evalStore.writeHistory(
+    role,
+    history.map((r) => (r.id === runId ? updated : r)),
+  );
+  return updated;
 }

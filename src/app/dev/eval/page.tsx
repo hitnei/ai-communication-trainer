@@ -4,9 +4,9 @@ import { EvalDashboard } from "@/features/eval/eval-dashboard";
 
 export const dynamic = "force-dynamic";
 
-export default function EvalPage() {
+export default async function EvalPage() {
   if (process.env.NODE_ENV === "production") notFound();
-  const overview = getEvalOverview();
+  const overview = await getEvalOverview();
 
   return (
     <div className="space-y-6">

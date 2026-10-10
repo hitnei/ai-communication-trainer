@@ -363,9 +363,12 @@ Where things live:
   12), `checks.ts` (pure rules, unit-tested offline), `report.ts`
   (pass-rate, baseline comparison, verdict), `cost.ts` (cost estimate).
 - `src/application/eval/eval-service.ts` - runs a role, owns the guards.
-- `src/infrastructure/eval/eval-store.ts` - saves the latest run per role and
-  the baseline under `.data/eval/` (git-ignored).
-- UI: `/dev/eval` (dev only, 404 in production, "Prompt Eval" in the sidebar).
+- `src/infrastructure/eval/eval-store.ts` - saves every run per role
+  (`history-<role>.json`) and the baseline (`baseline.json`) under
+  `.data/eval/` (git-ignored). Runs saved before history existed
+  (`latest-<role>.json`) are seeded into history on first read.
+- UI: `/dev/eval` to run, `/dev/eval/history` to see progress (dev only, 404 in
+  production, "Prompt Eval" in the sidebar).
 - CLI: `pnpm eval` (config `vitest.eval.config.mts`, wrapper
   `test/eval/coach.eval.ts`), same service underneath.
 
@@ -378,6 +381,23 @@ How to use the UI:
    Click a case to see its input, which checks failed and why, and what the
    model actually said.
 4. When satisfied, **Save this run as baseline**. Later runs compare to it.
+
+Progress view (`/dev/eval/history`), per role:
+
+- Prompt journey: v1.0 → v1.1 with pass-rate per version.
+- Pass-rate per run chart, dashed lines where the prompt version changed.
+- Run cards (newest first): delta vs the previous run, newly passing / newly
+  failing cases, a text diff of the prompt against the previous run, badges
+  (baseline, version bumped, prompt edited without a version bump, model
+  changed, test cases changed), and an editable note "what I changed and why".
+- Case-by-run matrix: when each case started passing or broke.
+- A banner when the prompt in code differs from the one the last run measured
+  (an unmeasured change), with the diff.
+
+Each run stores a snapshot of the rendered prompt (system text, output
+contract, and each task template, using placeholder inputs; no API call is
+needed to capture it). It does not capture the checks or the dataset, so a
+change there shows up only as "Test cases changed" when case ids differ.
 
 Guards (enforced in the service, not only the UI): dev only; the call needs an
 explicit confirmation; refuses the mock provider; one run per role at a time;

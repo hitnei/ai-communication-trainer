@@ -46,15 +46,34 @@ export interface RoleReport {
   total: number;
   errors: number;
   cases: Record<string, boolean>;
+  /** Set when stored as a baseline, so the timeline can mark that run. */
+  runId?: string;
+}
+
+export interface PromptSection {
+  title: string;
+  text: string;
+}
+
+export interface PromptSnapshot {
+  hash: string;
+  sections: PromptSection[];
 }
 
 export interface RunRecord {
+  id: string;
   role: EvalRole;
   promptVersion: string;
   model: string;
   startedAt: string;
   finishedAt: string;
   aborted: boolean;
+  /** The exact prompt text this run measured. */
+  prompt: PromptSnapshot;
+  /** Free-text "what I changed and why", written by the user. */
+  note: string;
+  /** Seeded from a run saved before history existed. */
+  backfilled?: boolean;
   report: RoleReport;
   outcomes: CaseOutcome[];
 }

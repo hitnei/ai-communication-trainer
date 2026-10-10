@@ -20,7 +20,7 @@ describe.skipIf(!live)("coach eval (live Gemini, advisory)", () => {
         const comparison = compare(run.report, baseline);
         process.stderr.write(`${formatRun(run, comparison, baseline)}\n`);
         expect(run.report.errors, "infra errors, no verdict").toBe(0);
-        if (updateBaseline) setBaselineFromLatest(role);
+        if (updateBaseline) await setBaselineFromLatest(role);
         expect(isRegression(comparison), "pass-rate regressed vs baseline").toBe(false);
       },
       600_000,

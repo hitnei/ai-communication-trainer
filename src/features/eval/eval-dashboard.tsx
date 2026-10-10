@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Check, ChevronDown, ChevronRight, Play, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -249,9 +250,19 @@ function RolePanel({
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Ran {new Date(latest.finishedAt).toLocaleString()} on {latest.model}
+                Ran <span suppressHydrationWarning>{new Date(latest.finishedAt).toLocaleString()}</span> on {latest.model}
               </p>
             </div>
+
+            {data.promptChangedSinceLastRun && (
+              <p className="rounded-md bg-warning/15 p-3 text-sm">
+                The prompt in code has changed since this run, so these results
+                describe the old text. Run again to measure the new one.{" "}
+                <Link href="/dev/eval/history" className="underline underline-offset-4">
+                  See what changed
+                </Link>
+              </p>
+            )}
 
             {staleVersion && (
               <p className="text-xs text-muted-foreground">
@@ -300,7 +311,13 @@ function RolePanel({
               ))}
             </ul>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/dev/eval/history"
+                className="text-sm text-primary underline-offset-4 hover:underline"
+              >
+                View progress over time
+              </Link>
               <Button
                 variant="outline"
                 size="sm"

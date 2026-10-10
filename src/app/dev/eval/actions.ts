@@ -4,6 +4,7 @@ import {
   EvalGuardError,
   runEval,
   setBaselineFromLatest,
+  updateRunNote,
 } from "@/application/eval/eval-service";
 import { isEvalRole, type RoleReport, type RunRecord } from "@/domain/eval/types";
 
@@ -31,7 +32,20 @@ export async function setBaselineAction(
 ): Promise<ActionResult<RoleReport>> {
   if (!isEvalRole(role)) return { ok: false, error: "Unknown role." };
   try {
-    return { ok: true, value: setBaselineFromLatest(role) };
+    return { ok: true, value: await setBaselineFromLatest(role) };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function updateRunNoteAction(
+  role: string,
+  runId: string,
+  note: string,
+): Promise<ActionResult<RunRecord>> {
+  if (!isEvalRole(role)) return { ok: false, error: "Unknown role." };
+  try {
+    return { ok: true, value: await updateRunNote(role, runId, note) };
   } catch (error) {
     return fail(error);
   }

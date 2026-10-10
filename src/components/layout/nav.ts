@@ -53,7 +53,18 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Profile", href: "/profile", icon: UserCog, available: true },
   ...(process.env.NODE_ENV === "production"
     ? []
-    : [{ label: "Prompt Eval", href: "/dev/eval", icon: FlaskConical, available: true }]),
+    : [
+        {
+          label: "Prompt Eval",
+          href: "/dev/eval",
+          icon: FlaskConical,
+          available: true,
+          children: [
+            { label: "Run eval", href: "/dev/eval" },
+            { label: "Progress", href: "/dev/eval/history" },
+          ],
+        },
+      ]),
 ];
 
 export { Mic };

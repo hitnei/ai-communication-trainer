@@ -4,8 +4,9 @@ import type { RoleReport, RunRecord } from "@/domain/eval/types";
 
 const state = vi.hoisted(() => ({
   provider: null as unknown,
-  latest: new Map<string, unknown>(),
-  baseline: new Map<string, unknown>(),
+  history: new Map<string, RunRecord[]>(),
+  legacy: new Map<string, unknown>(),
+  baseline: new Map<string, RoleReport>(),
 }));
 
 vi.mock("@/lib/env", () => ({
@@ -16,8 +17,9 @@ vi.mock("@/infrastructure/ai/provider", () => ({
 }));
 vi.mock("@/infrastructure/eval/eval-store", () => ({
   evalStore: {
-    readLatest: (role: string) => state.latest.get(role) ?? null,
-    writeLatest: (r: RunRecord) => state.latest.set(r.role, r),
+    readHistory: (role: string) => state.history.get(role) ?? [],
+    writeHistory: (role: string, runs: RunRecord[]) => state.history.set(role, runs),
+    readLegacyLatest: (role: string) => state.legacy.get(role) ?? null,
     readBaseline: (role: string) => state.baseline.get(role) ?? null,
     writeBaseline: (r: RoleReport) => state.baseline.set(r.role, r),
   },
@@ -25,9 +27,11 @@ vi.mock("@/infrastructure/eval/eval-store", () => ({
 
 import {
   EvalGuardError,
+  getEvalHistory,
   getEvalOverview,
   runEval,
   setBaselineFromLatest,
+  updateRunNote,
 } from "./eval-service";
 
 const CANNED = {
@@ -66,7 +70,8 @@ function fakeProvider(name: string, onCall?: () => void) {
 }
 
 beforeEach(() => {
-  state.latest.clear();
+  state.history.clear();
+  state.legacy.clear();
   state.baseline.clear();
   state.provider = fakeProvider("gemini");
 });
@@ -102,7 +107,10 @@ describe("runEval", () => {
     expect(record.report.errors).toBe(0);
     expect(record.report.total).toBe(record.outcomes.length);
     expect(record.model).toBe("test-model");
-    expect(state.latest.get("vietnamese-coach")).toBe(record);
+    expect(state.history.get("vietnamese-coach")).toEqual([record]);
+    expect(record.id).toBeTruthy();
+    expect(record.prompt.sections.length).toBeGreaterThan(2);
+    expect(record.prompt.hash).toMatch(/^[0-9a-f]{8}$/);
   });
 
   it("stops early and marks the run incomplete on a 429", async () => {
@@ -125,31 +133,81 @@ describe("runEval", () => {
   });
 });
 
-describe("baseline and overview", () => {
+describe("baseline, history and overview", () => {
   it("refuses a baseline from an incomplete run, accepts a complete one", async () => {
-    expect(() => setBaselineFromLatest("english-coach")).toThrow(/No run/);
+    await expect(setBaselineFromLatest("english-coach")).rejects.toThrow(/No run/);
 
     const record = await runEval("english-coach", true);
     expect(record.report.errors).toBe(0);
-    const report = setBaselineFromLatest("english-coach");
-    expect(state.baseline.get("english-coach")).toBe(report);
+    const report = await setBaselineFromLatest("english-coach");
+    expect(report.runId).toBe(record.id);
+    expect(state.baseline.get("english-coach")).toEqual(report);
 
-    state.latest.set("english-coach", {
-      ...record,
-      report: { ...record.report, errors: 1 },
-    });
-    expect(() => setBaselineFromLatest("english-coach")).toThrow(/infrastructure/);
+    state.history.set("english-coach", [
+      { ...record, report: { ...record.report, errors: 1 } },
+    ]);
+    await expect(setBaselineFromLatest("english-coach")).rejects.toThrow(
+      /infrastructure/,
+    );
+  });
+
+  it("keeps every run in history instead of overwriting", async () => {
+    await runEval("vietnamese-coach", true);
+    await runEval("vietnamese-coach", true);
+    const [vi] = (await getEvalHistory()).filter((h) => h.role === "vietnamese-coach");
+    expect(vi.runs).toHaveLength(2);
+    expect(vi.runs[0].id).not.toBe(vi.runs[1].id);
+    expect(vi.currentVersion).toMatch(/^vietnamese-coach@/);
   });
 
   it("builds an overview with comparison against the baseline", async () => {
     await runEval("vietnamese-coach", true);
-    setBaselineFromLatest("vietnamese-coach");
-    const overview = getEvalOverview();
+    await setBaselineFromLatest("vietnamese-coach");
+    const overview = await getEvalOverview();
     const vi = overview.roles.find((r) => r.role === "vietnamese-coach");
     expect(overview.canRun).toBe(true);
     expect(overview.roles).toHaveLength(2);
     expect(vi?.caseCount).toBe(12);
     expect(vi?.comparison?.verdict).toBe("same");
+    expect(vi?.promptChangedSinceLastRun).toBe(false);
     expect(overview.roles.find((r) => r.role === "english-coach")?.latest).toBeNull();
+  });
+
+  it("flags a prompt that changed since the last run", async () => {
+    const record = await runEval("english-coach", true);
+    state.history.set("english-coach", [
+      { ...record, prompt: { ...record.prompt, hash: "00000000" } },
+    ]);
+    const overview = await getEvalOverview();
+    expect(
+      overview.roles.find((r) => r.role === "english-coach")?.promptChangedSinceLastRun,
+    ).toBe(true);
+  });
+
+  it("seeds history from a pre-history latest file and marks its baseline", async () => {
+    const first = await runEval("english-coach", true);
+    const legacy: Partial<RunRecord> = { ...first };
+    delete legacy.id;
+    delete legacy.prompt;
+    delete legacy.note;
+    state.history.clear();
+    state.legacy.set("english-coach", legacy);
+    state.baseline.set("english-coach", { ...first.report, runId: undefined });
+
+    const [en] = (await getEvalHistory()).filter((h) => h.role === "english-coach");
+    expect(en.runs).toHaveLength(1);
+    expect(en.runs[0].backfilled).toBe(true);
+    expect(en.runs[0].id).toMatch(/^legacy-/);
+    expect(en.baselineRunId).toBe(en.runs[0].id);
+  });
+
+  it("saves a note on a run and rejects an unknown run", async () => {
+    const record = await runEval("vietnamese-coach", true);
+    const updated = await updateRunNote("vietnamese-coach", record.id, "added code list");
+    expect(updated.note).toBe("added code list");
+    expect(state.history.get("vietnamese-coach")?.[0].note).toBe("added code list");
+    await expect(updateRunNote("vietnamese-coach", "nope", "x")).rejects.toThrow(
+      /not found/,
+    );
   });
 });
