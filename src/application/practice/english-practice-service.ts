@@ -1,4 +1,5 @@
 import "server-only";
+import { normalizeEnglishFeedback } from "@/domain/practice/normalize-feedback";
 import type {
   PracticeSession,
   VietnameseExerciseType,
@@ -158,7 +159,7 @@ export async function submitEnglishAttempt(input: {
 
   try {
     // Content/English analysis is required; pronunciation is best-effort (§26).
-    const [english, pronunciation] = await Promise.all([
+    const [rawEnglish, pronunciation] = await Promise.all([
       runEnglishCoach({
         exerciseType: session.exerciseType,
         prompt: session.prompt,
@@ -185,6 +186,15 @@ export async function submitEnglishAttempt(input: {
         return null;
       }),
     ]);
+
+    const normalized = normalizeEnglishFeedback(rawEnglish);
+    if (normalized.corrected > 0) {
+      logger.warn("issue_category_corrected", {
+        role: "english-coach",
+        count: normalized.corrected,
+      });
+    }
+    const english = normalized.feedback;
 
     // Guardrail (§28): never reveal an improved version before it's allowed,
     // regardless of what the model returned.

@@ -45,4 +45,22 @@ describe("coach prompts list the allowed issue codes", () => {
       expect(prompt()).toContain(code);
     }
   });
+
+  it("English Coach tells the model that informal contractions are not errors", async () => {
+    let system = "";
+    const provider = {
+      name: "capture",
+      generateText: async () => "",
+      generateStructured: async (p: { system?: string }) => {
+        system = p.system ?? "";
+        throw new Error("captured");
+      },
+    } as unknown as AIProvider;
+    await runEnglishCoach(
+      { prompt: "q", transcript: "t", allowImprovedVersion: false },
+      provider,
+    ).catch(() => {});
+    expect(system).toMatch(/gonna/);
+    expect(system).toMatch(/not mistakes/);
+  });
 });

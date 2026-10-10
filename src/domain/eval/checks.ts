@@ -18,6 +18,12 @@ export interface VietnameseCase {
   expect: {
     anyCode?: string[];
     maxIssues?: number;
+    /** No issue may use these categories (e.g. language slips are not thinking problems). */
+    noCategory?: string[];
+    /** Overrides the default voice-overlap floor for the improved version. */
+    minVoiceOverlap?: number;
+    /** The improved version must be shorter than the user's answer. */
+    rewriteShorterThanInput?: boolean;
   };
 }
 
@@ -32,6 +38,7 @@ export interface EnglishCase {
     mustFlag?: string[];
     mustNotFlag?: string[];
     maxIssues?: number;
+    minVoiceOverlap?: number;
   };
 }
 
@@ -154,14 +161,33 @@ export function evaluateVietnamese(
     );
     if (rewrite) {
       const overlap = voiceOverlap(c.answer, rewrite);
+      const floor = c.expect.minVoiceOverlap ?? MIN_VOICE_OVERLAP;
       results.push(
         check(
           "keeps_user_voice",
-          overlap >= MIN_VOICE_OVERLAP,
-          `overlap ${overlap.toFixed(2)}`,
+          overlap >= floor,
+          `overlap ${overlap.toFixed(2)} < ${floor}`,
         ),
       );
+      if (c.expect.rewriteShorterThanInput) {
+        const before = words(c.answer).length;
+        const after = words(rewrite).length;
+        results.push(
+          check("rewrite_is_tighter", after < before, `${after} words vs ${before}`),
+        );
+      }
     }
+  }
+
+  for (const category of c.expect.noCategory ?? []) {
+    const hit = fb.issues.filter((i) => i.category === category);
+    results.push(
+      check(
+        `no_${category}_issues`,
+        hit.length === 0,
+        hit.map((i) => i.code).join(", "),
+      ),
+    );
   }
 
   if (c.expect.anyCode) {
@@ -250,11 +276,12 @@ export function evaluateEnglish(
     );
     if (rewrite) {
       const overlap = voiceOverlap(c.transcript, rewrite);
+      const floor = c.expect.minVoiceOverlap ?? MIN_VOICE_OVERLAP;
       results.push(
         check(
           "keeps_user_voice",
-          overlap >= MIN_VOICE_OVERLAP,
-          `overlap ${overlap.toFixed(2)}`,
+          overlap >= floor,
+          `overlap ${overlap.toFixed(2)} < ${floor}`,
         ),
       );
     }
@@ -319,6 +346,8 @@ export function observeVietnamese(fb: VietnameseCoachFeedback): ObservedFeedback
       code: i.code,
       evidence: null,
       naturalness: null,
+      title: i.title,
+      detail: i.detail,
     })),
   };
 }
@@ -332,6 +361,8 @@ export function observeEnglish(fb: EnglishCoachFeedback): ObservedFeedback {
       code: i.code,
       evidence: i.evidence,
       naturalness: i.naturalness,
+      title: i.title,
+      detail: i.detail,
     })),
   };
 }

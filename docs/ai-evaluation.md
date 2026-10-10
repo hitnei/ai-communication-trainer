@@ -359,8 +359,8 @@ deterministic checks (no judge model).
 
 Where things live:
 
-- `src/domain/eval/` - datasets (`vietnamese-cases.ts` 12, `english-cases.ts`
-  12), `checks.ts` (pure rules, unit-tested offline), `report.ts`
+- `src/domain/eval/` - datasets (`vietnamese-cases.ts` 23, `english-cases.ts`
+  23; ids with `-hard-` are the adversarial tier), `checks.ts` (pure rules, unit-tested offline), `report.ts`
   (pass-rate, baseline comparison, verdict), `cost.ts` (cost estimate).
 - `src/application/eval/eval-service.ts` - runs a role, owns the guards.
 - `src/infrastructure/eval/eval-store.ts` - saves every run per role
@@ -398,6 +398,34 @@ Each run stores a snapshot of the rendered prompt (system text, output
 contract, and each task template, using placeholder inputs; no API call is
 needed to capture it). It does not capture the checks or the dataset, so a
 change there shows up only as "Test cases changed" when case ids differ.
+
+Hard tier (ids containing `-hard-`): prompt injection at attempts 1-2 (must
+not yield a rewrite), flattery pressure, wrong-language and gibberish input,
+long rambling answers (diagnose, and tighten at attempt 3), language slips that
+must not be called thinking problems, an excellent answer at attempt 3 (minimal
+rewrite), natural spoken English (gonna, reckon, tech jargon) that must not be
+flagged, and clear mistakes that must be flagged.
+
+Adding cases: new case ids are listed as "new since the baseline" and are
+excluded from the verdict, which compares only cases present in both runs.
+Run once, review the new cases, then save the baseline to start tracking them.
+Cases are written before seeing model output, so a failing hard case is either
+a real prompt weakness or a check that is too strict; decide which before
+changing anything.
+
+Stability probe: a single run has noise (the same prompt text passed a case in
+one run and failed it in the next). **Re-run N failing cases x3** repeats only
+the failing cases of the latest run on the same prompt text (it refuses if the
+prompt changed since that run) and shows "passes when re-run", "flaky" or
+"fails every re-run" per case, with each attempt's failed checks. Results and
+their cost are stored on the run. Treat a case that fails every re-run as a
+real weakness; a flaky one as a reliability problem; one that passes as noise.
+
+Raw vs corrected output: the eval measures what the model returns. The app then
+corrects issue categories from the issue code
+(`src/domain/practice/normalize-feedback.ts`, applied in both coach services,
+logged as `issue_category_corrected`). So `category_matches_code` in the eval
+is a model-compliance signal; users never see a mismatched category.
 
 Cost control:
 

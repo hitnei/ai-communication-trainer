@@ -21,6 +21,9 @@ export interface ObservedIssue {
   code: string;
   evidence: string | null;
   naturalness: string | null;
+  /** The model's own wording; absent on runs recorded before these were kept. */
+  title?: string;
+  detail?: string;
 }
 
 export interface ObservedFeedback {
@@ -60,6 +63,20 @@ export interface PromptSnapshot {
   sections: PromptSection[];
 }
 
+export interface ProbeAttempt {
+  pass: boolean;
+  failures: CheckResult[];
+  observed?: ObservedFeedback;
+  error?: string;
+}
+
+/** Repeated runs of one failing case on an unchanged prompt, to tell noise from a real weakness. */
+export interface CaseProbe {
+  caseId: string;
+  ranAt: string;
+  attempts: ProbeAttempt[];
+}
+
 /** Tokens as billed: output includes thinking ("thoughts") tokens separately. */
 export interface TokenUsage {
   calls: number;
@@ -82,6 +99,9 @@ export interface RunRecord {
   /** Measured from the provider; absent on runs recorded before metering. */
   usage?: TokenUsage;
   costUsd?: number;
+  probes?: CaseProbe[];
+  probeUsage?: TokenUsage;
+  probeCostUsd?: number;
   /** The exact prompt text this run measured. */
   prompt: PromptSnapshot;
   /** Free-text "what I changed and why", written by the user. */

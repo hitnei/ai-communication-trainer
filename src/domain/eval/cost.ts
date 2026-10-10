@@ -10,6 +10,9 @@ export const DEFAULT_PRICES: Prices = { inputPerMillion: 1.5, outputPerMillion: 
 
 const RETRY_HEADROOM = 1.3;
 
+/** How many times a failing case is re-run to measure stability. */
+export const PROBE_REPEATS = 3;
+
 export interface CostEstimate {
   calls: number;
   lowUsd: number;

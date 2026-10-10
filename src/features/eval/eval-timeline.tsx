@@ -362,6 +362,27 @@ function RunCard({
             {run.abortReason === "quota" && " Stopped early: quota exhausted."}
           </p>
 
+          {run.probes && run.probes.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Stability of failing cases (re-run on the same prompt)
+              </p>
+              <ul className="space-y-0.5">
+                {run.probes.map((p) => {
+                  const passes = p.attempts.filter((a) => a.pass).length;
+                  return (
+                    <li key={p.caseId} className="flex items-center gap-2">
+                      <span className="font-mono text-xs">{p.caseId}</span>
+                      <Badge variant={passes === p.attempts.length ? "success" : passes === 0 ? "destructive" : "warning"}>
+                        {passes === p.attempts.length ? "passes when re-run" : passes === 0 ? "fails every re-run" : "flaky"} {passes}/{p.attempts.length}
+                      </Badge>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               What I changed and why
@@ -495,7 +516,7 @@ function RolePanel({ data }: { data: EvalHistoryRole }) {
     );
   }
 
-  const spend = runs.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
+  const spend = runs.reduce((sum, r) => sum + (r.costUsd ?? 0) + (r.probeCostUsd ?? 0), 0);
   const measuredRuns = runs.filter((r) => r.costUsd !== undefined).length;
   const unmeasuredDiffs = unmeasured && last ? diffSnapshots(last.run.prompt, data.currentPrompt) : [];
 

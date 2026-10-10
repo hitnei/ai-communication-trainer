@@ -9,9 +9,13 @@ export type Verdict = "better" | "worse" | "same" | "no_baseline";
 
 export interface Comparison {
   verdict: Verdict;
+  /** Pass-rate change measured only on cases present in both runs. */
   delta: number;
   regressions: string[];
   fixes: string[];
+  /** In this run but not in the baseline: reported, never compared. */
+  newCases: string[];
+  removedCases: string[];
 }
 
 const REGRESSION_TOLERANCE = 0.05;
@@ -66,19 +70,39 @@ export function compare(
   baseline: RoleReport | null | undefined,
 ): Comparison {
   if (!baseline) {
-    return { verdict: "no_baseline", delta: 0, regressions: [], fixes: [] };
+    return {
+      verdict: "no_baseline",
+      delta: 0,
+      regressions: [],
+      fixes: [],
+      newCases: [],
+      removedCases: [],
+    };
   }
   const regressions: string[] = [];
   const fixes: string[] = [];
+  const newCases: string[] = [];
+  let common = 0;
+  let nowPassing = 0;
+  let wasPassing = 0;
   for (const [id, pass] of Object.entries(report.cases)) {
     const before = baseline.cases[id];
-    if (before === undefined) continue;
+    if (before === undefined) {
+      newCases.push(id);
+      continue;
+    }
+    common += 1;
+    if (pass) nowPassing += 1;
+    if (before) wasPassing += 1;
     if (before && !pass) regressions.push(id);
     if (!before && pass) fixes.push(id);
   }
-  const delta = report.passRate - baseline.passRate;
+  const removedCases = Object.keys(baseline.cases).filter(
+    (id) => report.cases[id] === undefined,
+  );
+  const delta = common === 0 ? 0 : (nowPassing - wasPassing) / common;
   const verdict: Verdict = delta > 0 ? "better" : delta < 0 ? "worse" : "same";
-  return { verdict, delta, regressions, fixes };
+  return { verdict, delta, regressions, fixes, newCases, removedCases };
 }
 
 export function isRegression(c: Comparison): boolean {

@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AIProviderError } from "@/infrastructure/ai/errors";
 import { recordUsage } from "@/infrastructure/ai/usage";
+import { vietnameseCases } from "@/domain/eval/vietnamese-cases";
 import type { RoleReport, RunRecord } from "@/domain/eval/types";
+
+const N = vietnameseCases.length;
 
 const state = vi.hoisted(() => ({
   provider: null as unknown,
@@ -37,6 +40,7 @@ import {
   EvalGuardError,
   getEvalHistory,
   getEvalOverview,
+  probeFailingCases,
   runEval,
   setBaselineFromLatest,
   updateRunNote,
@@ -134,13 +138,13 @@ describe("runEval", () => {
   it("measures token usage and cost for the run", async () => {
     const record = await runEval("vietnamese-coach", true);
     expect(record.usage).toEqual({
-      calls: 12,
-      promptTokens: 12_000,
-      outputTokens: 6_000,
-      thoughtsTokens: 18_000,
+      calls: N,
+      promptTokens: N * 1_000,
+      outputTokens: N * 500,
+      thoughtsTokens: N * 1_500,
     });
-    // 12k in at $1/M + 24k out (thinking included) at $10/M
-    expect(record.costUsd).toBeCloseTo(0.012 + 0.24);
+    // per call: 1k in at $1/M + 2k out (thinking included) at $10/M
+    expect(record.costUsd).toBeCloseTo(N * 0.021);
   });
 
   it("stops at the per-run spend cap instead of finishing", async () => {
@@ -150,9 +154,9 @@ describe("runEval", () => {
     const record = await runEval("vietnamese-coach", true);
     expect(record.abortReason).toBe("budget");
     expect(record.aborted).toBe(true);
-    expect(calls).toBeLessThan(12);
+    expect(calls).toBeLessThan(N);
     expect(calls).toBeLessThanOrEqual(5);
-    expect(record.report.errors).toBe(12 - calls);
+    expect(record.report.errors).toBe(N - calls);
   });
 
   it("stops early and marks the run incomplete on a 429", async () => {
@@ -210,7 +214,7 @@ describe("baseline, history and overview", () => {
     const vi = overview.roles.find((r) => r.role === "vietnamese-coach");
     expect(overview.canRun).toBe(true);
     expect(overview.roles).toHaveLength(2);
-    expect(vi?.caseCount).toBe(12);
+    expect(vi?.caseCount).toBe(N);
     expect(vi?.comparison?.verdict).toBe("same");
     expect(vi?.promptChangedSinceLastRun).toBe(false);
     expect(overview.roles.find((r) => r.role === "english-coach")?.latest).toBeNull();
@@ -223,7 +227,7 @@ describe("baseline, history and overview", () => {
     await runEval("vietnamese-coach", true);
     const after = (await getEvalOverview()).roles.find((r) => r.role === "vietnamese-coach");
     expect(after?.estimate.basis).toBe("measured");
-    expect(after?.estimate.lowUsd).toBeCloseTo(0.252);
+    expect(after?.estimate.lowUsd).toBeCloseTo(N * 0.021);
     expect(after?.maxUsd).toBe(1);
   });
 
@@ -263,5 +267,75 @@ describe("baseline, history and overview", () => {
     await expect(updateRunNote("vietnamese-coach", "nope", "x")).rejects.toThrow(
       /not found/,
     );
+  });
+});
+
+describe("probeFailingCases", () => {
+  it("refuses without confirmation, on the mock provider, or with no run", async () => {
+    await expect(probeFailingCases("vietnamese-coach", false)).rejects.toThrow(/confirmation/);
+    state.provider = fakeProvider("mock");
+    await expect(probeFailingCases("vietnamese-coach", true)).rejects.toThrow(/live Gemini/);
+    state.provider = fakeProvider("gemini");
+    await expect(probeFailingCases("vietnamese-coach", true)).rejects.toThrow(/No run/);
+  });
+
+  it("re-runs every failing case three times and keeps the attempts", async () => {
+    const first = await runEval("vietnamese-coach", true);
+    const failing = first.outcomes.filter((o) => !o.pass && !o.error);
+    expect(failing.length).toBeGreaterThan(0);
+
+    let calls = 0;
+    state.provider = fakeProvider("gemini", () => calls++);
+    const updated = await probeFailingCases("vietnamese-coach", true);
+
+    expect(calls).toBe(failing.length * 3);
+    expect(updated.probes).toHaveLength(failing.length);
+    expect(updated.probes?.every((p) => p.attempts.length === 3)).toBe(true);
+    expect(updated.report).toEqual(first.report);
+    expect(updated.probeUsage?.calls).toBe(failing.length * 3);
+    expect(updated.probeCostUsd).toBeCloseTo(failing.length * 3 * 0.021);
+    expect(state.history.get("vietnamese-coach")?.[0].probes).toHaveLength(failing.length);
+  });
+
+  it("accumulates probe cost across repeated probes", async () => {
+    await runEval("english-coach", true);
+    const once = await probeFailingCases("english-coach", true);
+    const twice = await probeFailingCases("english-coach", true);
+    expect(twice.probeCostUsd).toBeCloseTo((once.probeCostUsd ?? 0) * 2);
+    expect(twice.probes).toHaveLength(once.probes?.length ?? 0);
+  });
+
+  it("refuses when the prompt changed since the run", async () => {
+    const record = await runEval("english-coach", true);
+    state.history.set("english-coach", [
+      { ...record, prompt: { ...record.prompt, hash: "00000000" } },
+    ]);
+    await expect(probeFailingCases("english-coach", true)).rejects.toThrow(/prompt changed/);
+  });
+
+  it("refuses when the last run has no failing cases", async () => {
+    const record = await runEval("english-coach", true);
+    state.history.set("english-coach", [
+      {
+        ...record,
+        outcomes: record.outcomes.map((o) => ({ ...o, pass: true })),
+      },
+    ]);
+    await expect(probeFailingCases("english-coach", true)).rejects.toThrow(/no failing/);
+  });
+
+  it("stops on a 429 and records the skipped attempts as errors", async () => {
+    await runEval("vietnamese-coach", true);
+    state.provider = {
+      name: "gemini",
+      generateText: async () => "",
+      generateStructured: async () => {
+        throw new AIProviderError("x", new Error('{"error":{"code":429}}'));
+      },
+    };
+    const updated = await probeFailingCases("vietnamese-coach", true);
+    const attempts = updated.probes?.flatMap((p) => p.attempts) ?? [];
+    expect(attempts.every((a) => !a.pass && a.error)).toBe(true);
+    expect(attempts.some((a) => /skipped/.test(a.error ?? ""))).toBe(true);
   });
 });

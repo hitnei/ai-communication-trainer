@@ -42,6 +42,9 @@ export function formatRun(
     if (comparison.fixes.length > 0) {
       lines.push(`  fixed: ${comparison.fixes.join(", ")}`);
     }
+    if (comparison.newCases.length > 0) {
+      lines.push(`  ${comparison.newCases.length} case mới, chưa có trong baseline (không tính vào so sánh)`);
+    }
   }
   lines.push(`VERDICT: ${LABEL[comparison.verdict]}`);
   return lines.join("\n");

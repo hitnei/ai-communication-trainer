@@ -11,15 +11,20 @@ import type {
   EvalOverview,
   EvalRoleOverview,
 } from "@/application/eval/eval-service";
-import { billedOutputTokens } from "@/domain/eval/cost";
+import { PROBE_REPEATS, billedOutputTokens } from "@/domain/eval/cost";
 import { compare, type Verdict } from "@/domain/eval/report";
 import {
   EVAL_ROLE_LABELS,
   type CaseOutcome,
+  type CaseProbe,
   type RoleReport,
   type RunRecord,
 } from "@/domain/eval/types";
-import { runEvalAction, setBaselineAction } from "@/app/dev/eval/actions";
+import {
+  probeFailingAction,
+  runEvalAction,
+  setBaselineAction,
+} from "@/app/dev/eval/actions";
 
 const VERDICT_LABEL: Record<Verdict, string> = {
   better: "Better than baseline",
@@ -38,10 +43,11 @@ const VERDICT_VARIANT: Record<Verdict, "success" | "destructive" | "muted"> = {
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const usd = (n: number) => `$${n.toFixed(2)}`;
 
-function CaseRow({ outcome }: { outcome: CaseOutcome }) {
+function CaseRow({ outcome, probe }: { outcome: CaseOutcome; probe?: CaseProbe }) {
   const [open, setOpen] = useState(false);
   const failing = outcome.checks.filter((c) => !c.pass);
   const status = outcome.error ? "error" : outcome.pass ? "pass" : "fail";
+  const probePasses = probe ? probe.attempts.filter((a) => a.pass).length : 0;
 
   return (
     <li className="border-b last:border-b-0">
@@ -71,6 +77,25 @@ function CaseRow({ outcome }: { outcome: CaseOutcome }) {
           <span className="truncate text-xs text-muted-foreground">
             {failing.map((c) => c.name).join(", ")}
           </span>
+        )}
+        {probe && (
+          <Badge
+            variant={
+              probePasses === probe.attempts.length
+                ? "success"
+                : probePasses === 0
+                  ? "destructive"
+                  : "warning"
+            }
+            className="ml-auto shrink-0"
+          >
+            {probePasses === probe.attempts.length
+              ? "Passes when re-run"
+              : probePasses === 0
+                ? "Fails every re-run"
+                : "Flaky"}{" "}
+            {probePasses}/{probe.attempts.length}
+          </Badge>
         )}
       </button>
       {open && (
@@ -108,6 +133,29 @@ function CaseRow({ outcome }: { outcome: CaseOutcome }) {
               </ul>
             </div>
           )}
+          {probe && (
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Re-run {probe.attempts.length} times on the same prompt
+              </p>
+              <ul className="mt-1 space-y-1">
+                {probe.attempts.map((a, idx) => (
+                  <li key={idx} className="flex items-start gap-2">
+                    {a.pass ? (
+                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                    ) : (
+                      <X className="mt-0.5 size-4 shrink-0 text-destructive" />
+                    )}
+                    <span>
+                      {a.pass
+                        ? "pass"
+                        : a.error ?? a.failures.map((f) => `${f.name}${f.detail ? ` (${f.detail})` : ""}`).join("; ")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {outcome.observed && (
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -117,9 +165,17 @@ function CaseRow({ outcome }: { outcome: CaseOutcome }) {
               <ul className="mt-1 space-y-0.5 text-muted-foreground">
                 {outcome.observed.issues.map((i, idx) => (
                   <li key={idx}>
-                    <span className="font-mono text-xs">{i.code}</span>
+                    <span className="font-mono text-xs">
+                      {i.category}/{i.code}
+                    </span>
                     {i.naturalness && ` (${i.naturalness})`}
                     {i.evidence && <> &ldquo;{i.evidence}&rdquo;</>}
+                    {i.detail && (
+                      <span className="block text-xs">
+                        {i.title ? `${i.title}: ` : ""}
+                        {i.detail}
+                      </span>
+                    )}
                   </li>
                 ))}
                 {outcome.observed.improvedVersion && (
@@ -147,7 +203,17 @@ function RolePanel({
   const [baseline, setBaseline] = useState<RoleReport | null>(data.baseline);
   const [confirming, setConfirming] = useState(false);
   const [running, setRunning] = useState(false);
+  const [confirmingProbe, setConfirmingProbe] = useState(false);
+  const [probing, setProbing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const failingCount = latest
+    ? latest.outcomes.filter((o) => !o.pass && !o.error).length
+    : 0;
+  const probeCalls = failingCount * PROBE_REPEATS;
+  const perCallLow = data.estimate.lowUsd / Math.max(data.estimate.calls, 1);
+  const perCallHigh = data.estimate.highUsd / Math.max(data.estimate.calls, 1);
+  const busy = running || probing;
 
   const comparison = latest ? compare(latest.report, baseline) : null;
   const staleVersion = latest && latest.promptVersion !== data.promptVersion;
@@ -158,6 +224,16 @@ function RolePanel({
     setError(null);
     const res = await runEvalAction(data.role, true);
     setRunning(false);
+    if (res.ok) setLatest(res.value);
+    else setError(res.error);
+  }
+
+  async function probe() {
+    setConfirmingProbe(false);
+    setProbing(true);
+    setError(null);
+    const res = await probeFailingAction(data.role, true);
+    setProbing(false);
     if (res.ok) setLatest(res.value);
     else setError(res.error);
   }
@@ -184,7 +260,7 @@ function RolePanel({
           </div>
           <Button
             onClick={() => setConfirming(true)}
-            disabled={!canRun || running || confirming}
+            disabled={!canRun || busy || confirming || confirmingProbe}
           >
             {running ? <Spinner /> : <Play />}
             {running ? "Running..." : "Run eval"}
@@ -214,6 +290,35 @@ function RolePanel({
               </Button>
             </div>
           </div>
+        )}
+
+        {confirmingProbe && (
+          <div className="space-y-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm">
+            <p className="font-medium">This calls the live Gemini API and costs money.</p>
+            <p>
+              Re-run {failingCount} failing case{failingCount === 1 ? "" : "s"} {PROBE_REPEATS} times each:{" "}
+              {probeCalls} calls to <span className="font-mono">{model}</span>, estimated{" "}
+              {usd(probeCalls * perCallLow)} - {usd(probeCalls * perCallHigh)}.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Uses the same prompt text as the last run, so you learn whether a
+              failure repeats or was a one-off. Stops by itself at {usd(data.maxUsd)}.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={probe}>
+                Confirm and re-run
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmingProbe(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {probing && (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner /> Re-running failing cases...
+          </p>
         )}
 
         {error && (
@@ -291,6 +396,14 @@ function RolePanel({
               </p>
             )}
 
+            {comparison.newCases.length > 0 && baseline && (
+              <p className="rounded-md bg-muted p-3 text-sm">
+                {comparison.newCases.length} case(s) are new since the baseline and
+                are not part of the comparison above. Save this run as the baseline
+                to start tracking them.
+              </p>
+            )}
+
             {(comparison.regressions.length > 0 || comparison.fixes.length > 0) && (
               <div className="grid gap-2 text-sm sm:grid-cols-2">
                 {comparison.regressions.length > 0 && (
@@ -318,7 +431,11 @@ function RolePanel({
 
             <ul className="rounded-lg border px-4">
               {latest.outcomes.map((o) => (
-                <CaseRow key={o.id} outcome={o} />
+                <CaseRow
+                  key={o.id}
+                  outcome={o}
+                  probe={latest.probes?.find((p) => p.caseId === o.id)}
+                />
               ))}
             </ul>
 
@@ -337,6 +454,16 @@ function RolePanel({
               >
                 Save this run as baseline
               </Button>
+              {failingCount > 0 && latest.report.errors === 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!canRun || busy || confirmingProbe || confirming}
+                  onClick={() => setConfirmingProbe(true)}
+                >
+                  Re-run {failingCount} failing case{failingCount === 1 ? "" : "s"} x{PROBE_REPEATS}
+                </Button>
+              )}
               <span className="text-xs text-muted-foreground">
                 Future runs are compared against the baseline.
               </span>

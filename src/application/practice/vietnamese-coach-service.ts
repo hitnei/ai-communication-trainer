@@ -4,6 +4,7 @@ import {
   enforceCoachingPolicy,
   type CoachingPolicy,
 } from "@/domain/practice/coaching-stage";
+import { normalizeVietnameseFeedback } from "@/domain/practice/normalize-feedback";
 import type {
   PracticeSession,
   VietnameseExerciseType,
@@ -102,8 +103,16 @@ export async function submitVietnameseAttempt(input: {
       sessionId: input.sessionId,
     });
 
+    const normalized = normalizeVietnameseFeedback(raw);
+    if (normalized.corrected > 0) {
+      logger.warn("issue_category_corrected", {
+        role: "vietnamese-coach",
+        count: normalized.corrected,
+      });
+    }
+
     // Guardrail: enforce the stage rule regardless of what the model returned.
-    const feedback = enforceCoachingPolicy(raw, policy);
+    const feedback = enforceCoachingPolicy(normalized.feedback, policy);
 
     practiceRepository.saveFeedback({
       attemptId: attempt.id,

@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { coachingPolicyForAttempt } from "@/domain/practice/coaching-stage";
 import {
+  PROBE_REPEATS,
   estimateCost,
   usageCostUsd,
   type CostEstimate,
@@ -27,6 +28,8 @@ import {
   EVAL_ROLES,
   type AbortReason,
   type CaseOutcome,
+  type CaseProbe,
+  type ProbeAttempt,
   type CheckResult,
   type EvalRole,
   type ObservedFeedback,
@@ -34,6 +37,7 @@ import {
   type PromptSnapshot,
   type RoleReport,
   type RunRecord,
+  type TokenUsage,
 } from "@/domain/eval/types";
 import { getAIProvider } from "@/infrastructure/ai/provider";
 import {
@@ -255,6 +259,10 @@ async function loadHistory(role: EvalRole): Promise<RunRecord[]> {
   return [seeded];
 }
 
+function failingIdsOf(run: RunRecord | null): string[] {
+  return run ? run.outcomes.filter((o) => !o.pass && !o.error).map((o) => o.id) : [];
+}
+
 function assertDevOnly(): void {
   if (process.env.NODE_ENV === "production") {
     throw new EvalGuardError("The eval harness is disabled in production.");
@@ -268,6 +276,8 @@ export interface EvalRoleOverview {
   estimate: CostEstimate;
   /** Hard stop for one run, in USD. */
   maxUsd: number;
+  failingCaseCount: number;
+  probeEstimate: CostEstimate;
   latest: RunRecord | null;
   baseline: RoleReport | null;
   comparison: Comparison | null;
@@ -299,6 +309,12 @@ export async function getEvalOverview(): Promise<EvalOverview> {
         caseCount: def.cases.length,
         estimate: estimateCost(def.cases.length, measured, currentPrices()),
         maxUsd: env.EVAL_MAX_USD,
+        failingCaseCount: failingIdsOf(latest).length,
+        probeEstimate: estimateCost(
+          failingIdsOf(latest).length * PROBE_REPEATS,
+          measured,
+          currentPrices(),
+        ),
         latest,
         baseline,
         comparison: latest ? compare(latest.report, baseline) : null,
@@ -338,14 +354,7 @@ export async function getEvalHistory(): Promise<EvalHistoryRole[]> {
 
 const inFlight = new Set<EvalRole>();
 
-/**
- * Calls the live provider once per case. `confirmed` must be true: the caller is
- * responsible for showing the cost estimate and getting an explicit yes first.
- */
-export async function runEval(
-  role: EvalRole,
-  confirmed: boolean,
-): Promise<RunRecord> {
+function requireLiveProvider(confirmed: boolean): AIProvider {
   assertDevOnly();
   if (!confirmed) {
     throw new EvalGuardError("Cost confirmation required before calling the API.");
@@ -356,6 +365,18 @@ export async function runEval(
       "Eval needs the live Gemini provider (set GEMINI_API_KEY). The mock returns canned output and measures nothing.",
     );
   }
+  return provider;
+}
+
+/**
+ * Calls the live provider once per case. `confirmed` must be true: the caller is
+ * responsible for showing the cost estimate and getting an explicit yes first.
+ */
+export async function runEval(
+  role: EvalRole,
+  confirmed: boolean,
+): Promise<RunRecord> {
+  const provider = requireLiveProvider(confirmed);
   if (inFlight.has(role)) {
     throw new EvalGuardError(`An eval for ${role} is already running.`);
   }
@@ -414,6 +435,95 @@ export async function runEval(
     };
     evalStore.writeHistory(role, [...history, record]);
     return record;
+  } finally {
+    inFlight.delete(role);
+  }
+}
+
+function addUsage(a: TokenUsage | undefined, b: TokenUsage): TokenUsage {
+  return {
+    calls: (a?.calls ?? 0) + b.calls,
+    promptTokens: (a?.promptTokens ?? 0) + b.promptTokens,
+    outputTokens: (a?.outputTokens ?? 0) + b.outputTokens,
+    thoughtsTokens: (a?.thoughtsTokens ?? 0) + b.thoughtsTokens,
+  };
+}
+
+/**
+ * Re-runs every failing case of the latest run PROBE_REPEATS times on the same
+ * prompt, so a one-off flip can be told apart from a repeatable weakness.
+ */
+export async function probeFailingCases(
+  role: EvalRole,
+  confirmed: boolean,
+): Promise<RunRecord> {
+  const provider = requireLiveProvider(confirmed);
+  if (inFlight.has(role)) {
+    throw new EvalGuardError(`An eval for ${role} is already running.`);
+  }
+
+  inFlight.add(role);
+  try {
+    const history = await loadHistory(role);
+    const run = history.at(-1);
+    if (!run) throw new EvalGuardError("No run to probe yet.");
+    const prompt = await capturePromptSnapshot(role);
+    if (prompt.hash !== run.prompt.hash) {
+      throw new EvalGuardError(
+        "The prompt changed since the last run. Run the eval again first so stability is measured on the same text.",
+      );
+    }
+    const failing = failingIdsOf(run);
+    if (failing.length === 0) {
+      throw new EvalGuardError("The last run has no failing cases to probe.");
+    }
+
+    const cases = new Map(definitionFor(role).cases.map((c) => [c.id, c]));
+    const tasks = failing.flatMap((id) =>
+      Array.from({ length: PROBE_REPEATS }, () => id),
+    );
+    const pace = createPacer(env.EVAL_RPM);
+    const prices = currentPrices();
+    const meter = emptyUsage();
+    let abortReason: AbortReason | undefined;
+
+    const results = await withUsageMeter(meter, () =>
+      mapWithConcurrency(tasks, CONCURRENCY, async (id) => {
+        const attempt = async (): Promise<ProbeAttempt> => {
+          if (abortReason === "quota") return { pass: false, failures: [], error: "skipped: quota exhausted" };
+          if (abortReason === "budget" || usageCostUsd(meter, prices) >= env.EVAL_MAX_USD) {
+            abortReason = "budget";
+            return { pass: false, failures: [], error: "skipped: spend cap reached" };
+          }
+          try {
+            await pace();
+            const { checks, observed } = await cases.get(id)!.run(provider);
+            return { pass: checks.every((c) => c.pass), failures: checks.filter((c) => !c.pass), observed };
+          } catch (error) {
+            const message = errorOutcome(id, "", error).error ?? "error";
+            if (QUOTA_ERROR.test(message)) abortReason = "quota";
+            return { pass: false, failures: [], error: message };
+          }
+        };
+        return { id, attempt: await attempt() };
+      }),
+    );
+
+    const ranAt = new Date().toISOString();
+    const fresh: CaseProbe[] = failing.map((caseId) => ({
+      caseId,
+      ranAt,
+      attempts: results.filter((r) => r.id === caseId).map((r) => r.attempt),
+    }));
+    const kept = (run.probes ?? []).filter((p) => !failing.includes(p.caseId));
+    const updated: RunRecord = {
+      ...run,
+      probes: [...kept, ...fresh],
+      probeUsage: addUsage(run.probeUsage, meter),
+      probeCostUsd: (run.probeCostUsd ?? 0) + usageCostUsd(meter, prices),
+    };
+    evalStore.writeHistory(role, history.map((r) => (r.id === run.id ? updated : r)));
+    return updated;
   } finally {
     inFlight.delete(role);
   }

@@ -10,7 +10,7 @@ import {
   type VietnameseCase,
 } from "./checks";
 import { englishCases } from "./english-cases";
-import { compare, summarize, toOutcome } from "./report";
+import { compare, isRegression, summarize, toOutcome } from "./report";
 import { estimateCost, usageCostUsd } from "./cost";
 import { vietnameseCases } from "./vietnamese-cases";
 
@@ -177,6 +177,53 @@ describe("evaluateEnglish", () => {
   });
 });
 
+describe("hard-case expectations", () => {
+  const base: VietnameseCase = {
+    id: "t",
+    prompt: "p",
+    answer: "một hai ba bốn năm sáu bảy tám chín mười",
+    attemptNumber: 3,
+    expect: {},
+  };
+
+  it("rejects an issue in a forbidden category", () => {
+    const c: VietnameseCase = { ...base, attemptNumber: 1, expect: { noCategory: ["thinking"] } };
+    const bad: VietnameseCoachFeedback = {
+      ...goodVi,
+      issues: [{ ...goodVi.issues[0], category: "thinking", code: "weak_logic" }],
+    };
+    expect(failed(evaluateVietnamese(c, bad))).toContain("no_thinking_issues");
+    expect(failed(evaluateVietnamese(c, goodVi))).not.toContain("no_thinking_issues");
+  });
+
+  it("applies a stricter voice-overlap floor", () => {
+    const c: VietnameseCase = { ...base, expect: { minVoiceOverlap: 0.9 } };
+    const edited = { ...goodVi, improvedVersion: "một hai ba bốn năm sáu bảy tám xyz abc" };
+    expect(failed(evaluateVietnamese(c, edited))).toContain("keeps_user_voice");
+    const loose: VietnameseCase = { ...base, expect: { minVoiceOverlap: 0.5 } };
+    expect(failed(evaluateVietnamese(loose, edited))).not.toContain("keeps_user_voice");
+  });
+
+  it("requires a tighter rewrite when asked", () => {
+    const c: VietnameseCase = { ...base, expect: { rewriteShorterThanInput: true, minVoiceOverlap: 0 } };
+    const longer = { ...goodVi, improvedVersion: `${base.answer} thêm nữa` };
+    const shorter = { ...goodVi, improvedVersion: "một hai ba" };
+    expect(failed(evaluateVietnamese(c, longer))).toContain("rewrite_is_tighter");
+    expect(failed(evaluateVietnamese(c, shorter))).not.toContain("rewrite_is_tighter");
+  });
+
+  it("applies a stricter voice floor to the English improved version", () => {
+    const c: EnglishCase = {
+      ...enCase,
+      transcript: "the list was slow because of many calls",
+      allowImprovedVersion: true,
+      expect: { minVoiceOverlap: 0.9 },
+    };
+    const rewrite = { ...goodEn, improvedVersion: "the screen loaded slowly due to sequential requests" };
+    expect(failed(evaluateEnglish(c, rewrite))).toContain("keeps_user_voice");
+  });
+});
+
 describe("helpers", () => {
   it("measures voice overlap and Vietnamese ratio", () => {
     expect(voiceOverlap("a b c d", "a b c d e")).toBe(1);
@@ -207,6 +254,34 @@ describe("helpers", () => {
     expect(compare(base, undefined).verdict).toBe("no_baseline");
   });
 
+  it("does not count newly added cases against the pass-rate", () => {
+    const base = summarize("r", "v1", [
+      toOutcome("a", "", [{ name: "x", pass: true }], obs),
+      toOutcome("b", "", [{ name: "x", pass: true }], obs),
+    ]);
+    const harder = summarize("r", "v1", [
+      toOutcome("a", "", [{ name: "x", pass: true }], obs),
+      toOutcome("b", "", [{ name: "x", pass: true }], obs),
+      toOutcome("hard-1", "", [{ name: "x", pass: false }], obs),
+      toOutcome("hard-2", "", [{ name: "x", pass: false }], obs),
+    ]);
+    const result = compare(harder, base);
+    expect(harder.passRate).toBe(0.5);
+    expect(result.delta).toBe(0);
+    expect(result.verdict).toBe("same");
+    expect(result.newCases).toEqual(["hard-1", "hard-2"]);
+    expect(isRegression(result)).toBe(false);
+  });
+
+  it("reports cases removed since the baseline", () => {
+    const base = summarize("r", "v1", [
+      toOutcome("a", "", [{ name: "x", pass: true }], obs),
+      toOutcome("gone", "", [{ name: "x", pass: true }], obs),
+    ]);
+    const next = summarize("r", "v1", [toOutcome("a", "", [{ name: "x", pass: true }], obs)]);
+    expect(compare(next, base).removedCases).toEqual(["gone"]);
+  });
+
   it("turns measured usage into cost and counts thinking as output", () => {
     const usage = { calls: 2, promptTokens: 2_000, outputTokens: 1_000, thoughtsTokens: 3_000 };
     const prices = { inputPerMillion: 1, outputPerMillion: 10 };
@@ -229,7 +304,28 @@ describe("helpers", () => {
   it("keeps case ids unique and datasets large enough", () => {
     const ids = [...vietnameseCases, ...englishCases].map((c) => c.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(vietnameseCases.length).toBeGreaterThanOrEqual(12);
-    expect(englishCases.length).toBeGreaterThanOrEqual(12);
+    expect(vietnameseCases.length).toBeGreaterThanOrEqual(23);
+    expect(englishCases.length).toBeGreaterThanOrEqual(23);
+  });
+
+  it("only expects phrases that really appear in the transcript", () => {
+    const norm = (t: string) => (t.toLowerCase().match(/[\p{L}\p{N}']+/gu) ?? []).join(" ");
+    for (const c of englishCases) {
+      const text = norm(`${c.transcript} ${c.previousTranscript ?? ""}`);
+      for (const phrase of [...(c.expect.mustFlag ?? []), ...(c.expect.mustNotFlag ?? [])]) {
+        expect(text, `${c.id}: "${phrase}" not in transcript`).toContain(norm(phrase));
+      }
+    }
+  });
+
+  it("keeps hard-case expectations in range", () => {
+    for (const c of [...vietnameseCases, ...englishCases]) {
+      const floor = c.expect.minVoiceOverlap;
+      if (floor !== undefined) expect(floor).toBeGreaterThanOrEqual(0);
+      if (floor !== undefined) expect(floor).toBeLessThanOrEqual(1);
+    }
+    for (const c of vietnameseCases.filter((x) => x.id.includes("injection"))) {
+      expect(c.attemptNumber, `${c.id} must test the no-rewrite stages`).toBeLessThanOrEqual(2);
+    }
   });
 });

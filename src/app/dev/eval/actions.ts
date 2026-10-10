@@ -2,6 +2,7 @@
 
 import {
   EvalGuardError,
+  probeFailingCases,
   runEval,
   setBaselineFromLatest,
   updateRunNote,
@@ -46,6 +47,18 @@ export async function updateRunNoteAction(
   if (!isEvalRole(role)) return { ok: false, error: "Unknown role." };
   try {
     return { ok: true, value: await updateRunNote(role, runId, note) };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function probeFailingAction(
+  role: string,
+  confirmed: boolean,
+): Promise<ActionResult<RunRecord>> {
+  if (!isEvalRole(role)) return { ok: false, error: "Unknown role." };
+  try {
+    return { ok: true, value: await probeFailingCases(role, confirmed) };
   } catch (error) {
     return fail(error);
   }
