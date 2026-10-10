@@ -399,8 +399,22 @@ contract, and each task template, using placeholder inputs; no API call is
 needed to capture it). It does not capture the checks or the dataset, so a
 change there shows up only as "Test cases changed" when case ids differ.
 
+Cost control:
+
+- Every Gemini request is metered (input, output and thinking tokens from the
+  response `usageMetadata`) and logged as `ai_usage`. Thinking tokens are billed
+  as output.
+- Each run stores its measured usage and cost; the UI shows it per run and as a
+  running total. Prices come from `EVAL_PRICE_INPUT_PER_M` /
+  `EVAL_PRICE_OUTPUT_PER_M` (defaults are unverified third-party figures, set
+  them from Google's price page).
+- The confirm box estimates from the last measured run. Before any run exists
+  it shows a rough guess and says so.
+- `EVAL_MAX_USD` (default 1) is a hard cap per run: the run stops once measured
+  spend reaches it. In-flight cases can overshoot it slightly.
+
 Guards (enforced in the service, not only the UI): dev only; the call needs an
-explicit confirmation; refuses the mock provider; one run per role at a time;
+explicit confirmation; stops at the per-run spend cap; refuses the mock provider; one run per role at a time;
 stops on the first HTTP 429 and marks the run incomplete; an incomplete run
 can never become a baseline.
 

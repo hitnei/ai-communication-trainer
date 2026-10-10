@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import type { EvalHistoryRole } from "@/application/eval/eval-service";
+import { billedOutputTokens } from "@/domain/eval/cost";
 import { collapseContext } from "@/domain/eval/diff";
 import { buildTimeline, type TimelineEntry } from "@/domain/eval/history";
 import { diffSnapshots, type SectionDiff } from "@/domain/eval/prompt-snapshot";
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { updateRunNoteAction } from "@/app/dev/eval/actions";
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
+const usd = (n: number) => `$${n.toFixed(2)}`;
 const pts = (n: number) => `${n > 0 ? "+" : ""}${Math.round(n * 100)} pts`;
 
 function Time({ iso }: { iso: string }) {
@@ -344,13 +346,22 @@ function RunCard({
         {entry.modelChanged && <Badge variant="warning">Model changed</Badge>}
         {entry.caseSetChanged && <Badge variant="warning">Test cases changed</Badge>}
         {run.report.errors > 0 && <Badge variant="warning">Incomplete</Badge>}
-        <span className="ml-auto text-xs text-muted-foreground">
+        <span className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+          {run.costUsd !== undefined && <span>{usd(run.costUsd)}</span>}
           <Time iso={run.finishedAt} />
         </span>
       </button>
 
       {open && (
         <div className="space-y-4 border-t p-4 text-sm">
+          <p className="text-xs text-muted-foreground">
+            {run.usage && run.costUsd !== undefined
+              ? `Spent ${usd(run.costUsd)} on ${run.usage.calls} requests: ${run.usage.promptTokens.toLocaleString()} input tokens, ${billedOutputTokens(run.usage).toLocaleString()} output tokens of which ${run.usage.thoughtsTokens.toLocaleString()} were thinking.`
+              : "Token usage was not measured for this run."}
+            {run.abortReason === "budget" && " Stopped at the per-run spend cap."}
+            {run.abortReason === "quota" && " Stopped early: quota exhausted."}
+          </p>
+
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               What I changed and why
@@ -484,6 +495,8 @@ function RolePanel({ data }: { data: EvalHistoryRole }) {
     );
   }
 
+  const spend = runs.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
+  const measuredRuns = runs.filter((r) => r.costUsd !== undefined).length;
   const unmeasuredDiffs = unmeasured && last ? diffSnapshots(last.run.prompt, data.currentPrompt) : [];
 
   return (
@@ -531,6 +544,11 @@ function RolePanel({ data }: { data: EvalHistoryRole }) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Runs (newest first)</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {measuredRuns > 0
+              ? `Recorded spend: ${usd(spend)} across ${measuredRuns} measured run${measuredRuns === 1 ? "" : "s"}.`
+              : "No spend recorded yet: runs before token metering have no cost data."}
+          </p>
         </CardHeader>
         <CardContent>
           <ul className="space-y-2">

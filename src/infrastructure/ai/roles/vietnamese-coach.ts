@@ -6,10 +6,11 @@ import type { CoachingPolicy } from "@/domain/practice/coaching-stage";
 import { EXERCISE_LABELS } from "@/domain/practice/types";
 import type { VietnameseExerciseType } from "@/domain/practice/types";
 import { buildSystemPrompt, buildUserPrompt } from "../prompt/builder";
+import { VIETNAMESE_CODE_RULES } from "../prompt/issue-codes";
 import { getAIProvider } from "../provider";
 import type { AIProvider } from "../types";
 
-export const VIETNAMESE_COACH_PROMPT_VERSION = "vietnamese-coach@1.0";
+export const VIETNAMESE_COACH_PROMPT_VERSION = "vietnamese-coach@1.1";
 
 const ROLE_RULES = `You are a Vietnamese-speaking communication coach. Your job is to help the user turn messy thoughts into clear, structured, concise, complete communication (thinking + communication - this is NOT an English lesson).
 
@@ -73,7 +74,9 @@ const OUTPUT_CONTRACT = `Return ONLY JSON with this shape:
   "suggestions": string[],          // direction/hints from guide stage on
   "improvedVersion": string | null, // null unless improve stage
   "nextAction": "retry" | "satisfied_or_retry"
-}`;
+}
+
+${VIETNAMESE_CODE_RULES}`;
 
 /** Run the Vietnamese Coach for one attempt and return validated feedback. */
 export async function runVietnameseCoach(

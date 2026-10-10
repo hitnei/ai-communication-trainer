@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AIProviderError } from "@/infrastructure/ai/errors";
+import { recordUsage } from "@/infrastructure/ai/usage";
 import type { RoleReport, RunRecord } from "@/domain/eval/types";
 
 const state = vi.hoisted(() => ({
@@ -9,9 +10,16 @@ const state = vi.hoisted(() => ({
   baseline: new Map<string, RoleReport>(),
 }));
 
-vi.mock("@/lib/env", () => ({
-  env: { GEMINI_MODEL: "test-model", EVAL_RPM: 6000, LOG_LEVEL: "error" },
+const envState = vi.hoisted(() => ({
+  GEMINI_MODEL: "test-model",
+  EVAL_RPM: 6000,
+  LOG_LEVEL: "error",
+  EVAL_MAX_USD: 1,
+  EVAL_PRICE_INPUT_PER_M: 1,
+  EVAL_PRICE_OUTPUT_PER_M: 10,
 }));
+
+vi.mock("@/lib/env", () => ({ env: envState }));
 vi.mock("@/infrastructure/ai/provider", () => ({
   getAIProvider: () => state.provider,
 }));
@@ -55,7 +63,15 @@ const CANNED = {
   },
 } as const;
 
-function fakeProvider(name: string, onCall?: () => void) {
+function fakeProvider(
+  name: string,
+  onCall?: () => void,
+  usage: { promptTokens: number; outputTokens: number; thoughtsTokens: number } = {
+    promptTokens: 1_000,
+    outputTokens: 500,
+    thoughtsTokens: 1_500,
+  },
+) {
   return {
     name,
     generateText: async () => "",
@@ -63,6 +79,7 @@ function fakeProvider(name: string, onCall?: () => void) {
       params: { schemaName?: string; schema: { parse: (v: unknown) => unknown } },
     ) => {
       onCall?.();
+      recordUsage(usage);
       const canned = CANNED[params.schemaName as keyof typeof CANNED];
       return params.schema.parse(canned);
     },
@@ -70,6 +87,7 @@ function fakeProvider(name: string, onCall?: () => void) {
 }
 
 beforeEach(() => {
+  envState.EVAL_MAX_USD = 1;
   state.history.clear();
   state.legacy.clear();
   state.baseline.clear();
@@ -113,6 +131,30 @@ describe("runEval", () => {
     expect(record.prompt.hash).toMatch(/^[0-9a-f]{8}$/);
   });
 
+  it("measures token usage and cost for the run", async () => {
+    const record = await runEval("vietnamese-coach", true);
+    expect(record.usage).toEqual({
+      calls: 12,
+      promptTokens: 12_000,
+      outputTokens: 6_000,
+      thoughtsTokens: 18_000,
+    });
+    // 12k in at $1/M + 24k out (thinking included) at $10/M
+    expect(record.costUsd).toBeCloseTo(0.012 + 0.24);
+  });
+
+  it("stops at the per-run spend cap instead of finishing", async () => {
+    envState.EVAL_MAX_USD = 0.05;
+    let calls = 0;
+    state.provider = fakeProvider("gemini", () => calls++);
+    const record = await runEval("vietnamese-coach", true);
+    expect(record.abortReason).toBe("budget");
+    expect(record.aborted).toBe(true);
+    expect(calls).toBeLessThan(12);
+    expect(calls).toBeLessThanOrEqual(5);
+    expect(record.report.errors).toBe(12 - calls);
+  });
+
   it("stops early and marks the run incomplete on a 429", async () => {
     let calls = 0;
     state.provider = {
@@ -128,6 +170,7 @@ describe("runEval", () => {
     };
     const record = await runEval("english-coach", true);
     expect(record.aborted).toBe(true);
+    expect(record.abortReason).toBe("quota");
     expect(calls).toBeLessThanOrEqual(2);
     expect(record.report.errors).toBe(record.outcomes.length);
   });
@@ -171,6 +214,17 @@ describe("baseline, history and overview", () => {
     expect(vi?.comparison?.verdict).toBe("same");
     expect(vi?.promptChangedSinceLastRun).toBe(false);
     expect(overview.roles.find((r) => r.role === "english-coach")?.latest).toBeNull();
+  });
+
+  it("bases the estimate on the last measured run", async () => {
+    const before = (await getEvalOverview()).roles.find((r) => r.role === "vietnamese-coach");
+    expect(before?.estimate.basis).toBe("assumed");
+
+    await runEval("vietnamese-coach", true);
+    const after = (await getEvalOverview()).roles.find((r) => r.role === "vietnamese-coach");
+    expect(after?.estimate.basis).toBe("measured");
+    expect(after?.estimate.lowUsd).toBeCloseTo(0.252);
+    expect(after?.maxUsd).toBe(1);
   });
 
   it("flags a prompt that changed since the last run", async () => {

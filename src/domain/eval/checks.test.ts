@@ -11,7 +11,7 @@ import {
 } from "./checks";
 import { englishCases } from "./english-cases";
 import { compare, summarize, toOutcome } from "./report";
-import { estimateCost } from "./cost";
+import { estimateCost, usageCostUsd } from "./cost";
 import { vietnameseCases } from "./vietnamese-cases";
 
 const obs = { summary: "", issues: [], improvedVersion: null };
@@ -207,12 +207,23 @@ describe("helpers", () => {
     expect(compare(base, undefined).verdict).toBe("no_baseline");
   });
 
-  it("estimates a cost range that scales with calls", () => {
-    const small = estimateCost(12);
-    const big = estimateCost(24);
-    expect(small.lowUsd).toBeGreaterThan(0);
-    expect(small.highUsd).toBeGreaterThan(small.lowUsd);
-    expect(big.highUsd).toBeCloseTo(small.highUsd * 2);
+  it("turns measured usage into cost and counts thinking as output", () => {
+    const usage = { calls: 2, promptTokens: 2_000, outputTokens: 1_000, thoughtsTokens: 3_000 };
+    const prices = { inputPerMillion: 1, outputPerMillion: 10 };
+    expect(usageCostUsd(usage, prices)).toBeCloseTo(0.002 + 0.04);
+  });
+
+  it("estimates from measured usage when available, else from an assumption", () => {
+    const prices = { inputPerMillion: 1.5, outputPerMillion: 9 };
+    const measured = { calls: 12, promptTokens: 12_000, outputTokens: 9_600, thoughtsTokens: 24_000 };
+    const real = estimateCost(24, measured, prices);
+    expect(real.basis).toBe("measured");
+    expect(real.lowUsd).toBeCloseTo(usageCostUsd(measured, prices) * 2);
+    expect(real.highUsd).toBeGreaterThan(real.lowUsd);
+
+    const guess = estimateCost(24, null, prices);
+    expect(guess.basis).toBe("assumed");
+    expect(guess.highUsd).toBeGreaterThan(guess.lowUsd);
   });
 
   it("keeps case ids unique and datasets large enough", () => {

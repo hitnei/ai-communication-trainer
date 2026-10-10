@@ -18,6 +18,11 @@ const envSchema = z.object({
   AI_PROVIDER: z.enum(["gemini", "mock", "auto"]).default("auto"),
   // Request pacing for the prompt eval harness. Lower it on a free-tier key.
   EVAL_RPM: z.coerce.number().int().min(1).max(6000).default(30),
+  // Hard stop for one eval run, measured from real token usage.
+  EVAL_MAX_USD: z.coerce.number().positive().default(1),
+  // USD per 1M tokens, used to turn measured tokens into cost. Check Google's page.
+  EVAL_PRICE_INPUT_PER_M: z.coerce.number().positive().default(1.5),
+  EVAL_PRICE_OUTPUT_PER_M: z.coerce.number().positive().default(9),
   DATABASE_PATH: z.string().min(1).default("./.data/app.db"),
   AUDIO_STORAGE_DIR: z.string().min(1).default("./.data/audio"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),

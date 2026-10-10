@@ -60,6 +60,16 @@ export interface PromptSnapshot {
   sections: PromptSection[];
 }
 
+/** Tokens as billed: output includes thinking ("thoughts") tokens separately. */
+export interface TokenUsage {
+  calls: number;
+  promptTokens: number;
+  outputTokens: number;
+  thoughtsTokens: number;
+}
+
+export type AbortReason = "quota" | "budget";
+
 export interface RunRecord {
   id: string;
   role: EvalRole;
@@ -68,6 +78,10 @@ export interface RunRecord {
   startedAt: string;
   finishedAt: string;
   aborted: boolean;
+  abortReason?: AbortReason;
+  /** Measured from the provider; absent on runs recorded before metering. */
+  usage?: TokenUsage;
+  costUsd?: number;
   /** The exact prompt text this run measured. */
   prompt: PromptSnapshot;
   /** Free-text "what I changed and why", written by the user. */

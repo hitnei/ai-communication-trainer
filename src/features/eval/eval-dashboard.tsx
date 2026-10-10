@@ -11,7 +11,7 @@ import type {
   EvalOverview,
   EvalRoleOverview,
 } from "@/application/eval/eval-service";
-import { PRICING_MODEL } from "@/domain/eval/cost";
+import { billedOutputTokens } from "@/domain/eval/cost";
 import { compare, type Verdict } from "@/domain/eval/report";
 import {
   EVAL_ROLE_LABELS,
@@ -200,8 +200,10 @@ function RolePanel({
               estimated {usd(data.estimate.lowUsd)} - {usd(data.estimate.highUsd)}.
             </p>
             <p className="text-xs text-muted-foreground">
-              Estimate uses {PRICING_MODEL} pricing and measured prompt sizes. A
-              retry on a malformed answer can add a few calls.
+              {data.estimate.basis === "measured"
+                ? "Based on the real token usage of your last run."
+                : "No measured usage yet, so this is only a rough guess and the real cost may be higher. This run measures it."}{" "}
+              The run stops by itself once spend reaches {usd(data.maxUsd)}.
             </p>
             <div className="flex gap-2">
               <Button size="sm" onClick={run}>
@@ -249,6 +251,14 @@ function RolePanel({
                   </p>
                 )}
               </div>
+              {latest.usage && latest.costUsd !== undefined && (
+                <p className="text-xs text-muted-foreground">
+                  Spent {usd(latest.costUsd)} · {latest.usage.calls} requests ·{" "}
+                  {latest.usage.promptTokens.toLocaleString()} in /{" "}
+                  {billedOutputTokens(latest.usage).toLocaleString()} out tokens (
+                  {latest.usage.thoughtsTokens.toLocaleString()} thinking)
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Ran <span suppressHydrationWarning>{new Date(latest.finishedAt).toLocaleString()}</span> on {latest.model}
               </p>
@@ -274,7 +284,8 @@ function RolePanel({
             {latest.report.errors > 0 && (
               <p className="rounded-md bg-warning/15 p-3 text-sm">
                 Incomplete: {latest.report.errors} case(s) hit an API error
-                {latest.aborted && " (quota exhausted, the run stopped early)"}. They
+                {latest.abortReason === "quota" && " (quota exhausted, the run stopped early)"}
+                {latest.abortReason === "budget" && " (the per-run spend cap was reached, the run stopped early)"}. They
                 are excluded from the pass-rate and this run cannot become a
                 baseline.
               </p>

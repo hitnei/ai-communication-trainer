@@ -5,10 +5,11 @@ import {
 import { EXERCISE_LABELS } from "@/domain/practice/types";
 import type { VietnameseExerciseType } from "@/domain/practice/types";
 import { buildSystemPrompt, buildUserPrompt } from "../prompt/builder";
+import { ENGLISH_CODE_RULES } from "../prompt/issue-codes";
 import { getAIProvider } from "../provider";
 import type { AIProvider } from "../types";
 
-export const ENGLISH_COACH_PROMPT_VERSION = "english-coach@1.0";
+export const ENGLISH_COACH_PROMPT_VERSION = "english-coach@1.1";
 
 const ROLE_RULES = `You are a spoken-English communication coach for a senior frontend engineer preparing for interviews in Australia and Europe. You analyze a TRANSCRIPT of the user speaking.
 
@@ -45,7 +46,9 @@ const OUTPUT_CONTRACT = `Return ONLY JSON:
   "topFocusAreas": string[],         // 2-3 items, the most valuable to fix
   "improvedVersion": string | null,  // null unless explicitly allowed
   "comparison": { "improvement": string, "remainingIssue": string } | null
-}`;
+}
+
+${ENGLISH_CODE_RULES}`;
 
 function buildTask(input: EnglishCoachInput): string {
   const exercise = input.exerciseType

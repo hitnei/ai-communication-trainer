@@ -1,7 +1,12 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { coachingPolicyForAttempt } from "@/domain/practice/coaching-stage";
-import { estimateCost, type CostEstimate } from "@/domain/eval/cost";
+import {
+  estimateCost,
+  usageCostUsd,
+  type CostEstimate,
+  type Prices,
+} from "@/domain/eval/cost";
 import {
   evaluateEnglish,
   evaluateVietnamese,
@@ -20,6 +25,7 @@ import {
 } from "@/domain/eval/report";
 import {
   EVAL_ROLES,
+  type AbortReason,
   type CaseOutcome,
   type CheckResult,
   type EvalRole,
@@ -39,12 +45,20 @@ import {
   runVietnameseCoach,
 } from "@/infrastructure/ai/roles/vietnamese-coach";
 import type { AIProvider } from "@/infrastructure/ai/types";
+import { emptyUsage, withUsageMeter } from "@/infrastructure/ai/usage";
 import { evalStore } from "@/infrastructure/eval/eval-store";
 import { env } from "@/lib/env";
 import { createPacer, mapWithConcurrency } from "./pacing";
 
 const CONCURRENCY = 2;
 const QUOTA_ERROR = /\b429\b|RESOURCE_EXHAUSTED/;
+
+function currentPrices(): Prices {
+  return {
+    inputPerMillion: env.EVAL_PRICE_INPUT_PER_M,
+    outputPerMillion: env.EVAL_PRICE_OUTPUT_PER_M,
+  };
+}
 
 export class EvalGuardError extends Error {
   constructor(message: string) {
@@ -252,6 +266,8 @@ export interface EvalRoleOverview {
   promptVersion: string;
   caseCount: number;
   estimate: CostEstimate;
+  /** Hard stop for one run, in USD. */
+  maxUsd: number;
   latest: RunRecord | null;
   baseline: RoleReport | null;
   comparison: Comparison | null;
@@ -276,11 +292,13 @@ export async function getEvalOverview(): Promise<EvalOverview> {
       const latest = history.at(-1) ?? null;
       const baseline = evalStore.readBaseline(role);
       const current = latest ? await capturePromptSnapshot(role) : null;
+      const measured = [...history].reverse().find((r) => r.usage?.calls)?.usage ?? null;
       return {
         role,
         promptVersion: def.promptVersion,
         caseCount: def.cases.length,
-        estimate: estimateCost(def.cases.length),
+        estimate: estimateCost(def.cases.length, measured, currentPrices()),
+        maxUsd: env.EVAL_MAX_USD,
         latest,
         baseline,
         comparison: latest ? compare(latest.report, baseline) : null,
@@ -348,15 +366,23 @@ export async function runEval(
     const prompt = await capturePromptSnapshot(role);
     const history = await loadHistory(role);
     const pace = createPacer(env.EVAL_RPM);
+    const prices = currentPrices();
+    const meter = emptyUsage();
     const startedAt = new Date().toISOString();
-    let quotaExhausted = false;
+    let abortReason: AbortReason | undefined;
 
-    const outcomes: CaseOutcome[] = await mapWithConcurrency(
-      def.cases,
-      CONCURRENCY,
-      async (c) => {
-        if (quotaExhausted) {
+    const outcomes: CaseOutcome[] = await withUsageMeter(meter, () =>
+      mapWithConcurrency(def.cases, CONCURRENCY, async (c) => {
+        if (abortReason === "quota") {
           return errorOutcome(c.id, c.input, "skipped: Gemini quota exhausted");
+        }
+        if (abortReason === "budget" || usageCostUsd(meter, prices) >= env.EVAL_MAX_USD) {
+          abortReason = "budget";
+          return errorOutcome(
+            c.id,
+            c.input,
+            `skipped: spend reached the $${env.EVAL_MAX_USD} cap for one run`,
+          );
         }
         try {
           await pace();
@@ -364,10 +390,10 @@ export async function runEval(
           return toOutcome(c.id, c.input, checks, observed);
         } catch (error) {
           const outcome = errorOutcome(c.id, c.input, error);
-          if (QUOTA_ERROR.test(outcome.error ?? "")) quotaExhausted = true;
+          if (QUOTA_ERROR.test(outcome.error ?? "")) abortReason = "quota";
           return outcome;
         }
-      },
+      }),
     );
 
     const record: RunRecord = {
@@ -377,7 +403,10 @@ export async function runEval(
       model: env.GEMINI_MODEL,
       startedAt,
       finishedAt: new Date().toISOString(),
-      aborted: quotaExhausted,
+      aborted: abortReason !== undefined,
+      abortReason,
+      usage: meter,
+      costUsd: usageCostUsd(meter, prices),
       prompt,
       note: "",
       report: summarize(role, def.promptVersion, outcomes),

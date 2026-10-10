@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
-import { logAiCall } from "@/lib/logger";
+import { logAiCall, logger } from "@/lib/logger";
+import { recordUsage } from "./usage";
 import { AIProviderError, AIStructuredError } from "./errors";
 import { runStructured } from "./structured";
 import type {
@@ -67,6 +68,26 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
   }
 }
 
+interface UsageCarrier {
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    thoughtsTokenCount?: number;
+  };
+}
+
+/** Every billed request is metered, so cost is measured rather than guessed. */
+function reportUsage(role: string, res: UsageCarrier): void {
+  const u = res.usageMetadata;
+  const sample = {
+    promptTokens: u?.promptTokenCount ?? 0,
+    outputTokens: u?.candidatesTokenCount ?? 0,
+    thoughtsTokens: u?.thoughtsTokenCount ?? 0,
+  };
+  recordUsage(sample);
+  logger.info("ai_usage", { role, ...sample });
+}
+
 /**
  * Gemini implementation of AIProvider. This is the only file that imports the
  * Gemini SDK - the rest of the app depends solely on the AIProvider interface.
@@ -115,6 +136,7 @@ export class GeminiAIProvider implements AIProvider {
         latencyMs: Math.round(performance.now() - started),
         ok: true,
       });
+      reportUsage(meta.role, res);
       return res.text ?? "";
     } catch (e) {
       logAiCall({
@@ -154,6 +176,7 @@ export class GeminiAIProvider implements AIProvider {
               },
             }),
           );
+          reportUsage(meta.role, res);
           return res.text ?? "";
         },
       });

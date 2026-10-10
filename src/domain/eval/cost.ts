@@ -1,27 +1,60 @@
-export const PRICING_MODEL = "gemini-3.5-flash";
+import type { TokenUsage } from "./types";
 
-const INPUT_USD_PER_TOKEN = 1.5 / 1_000_000;
-const OUTPUT_USD_PER_TOKEN = 9 / 1_000_000;
-const RETRY_FACTOR = 1.2;
+export interface Prices {
+  inputPerMillion: number;
+  outputPerMillion: number;
+}
 
-const LOW = { inputTokens: 1_000, outputTokens: 800 };
-const HIGH = { inputTokens: 1_500, outputTokens: 1_800 };
+/** Unverified third-party figures for gemini-3.5-flash; override via env. */
+export const DEFAULT_PRICES: Prices = { inputPerMillion: 1.5, outputPerMillion: 9 };
+
+const RETRY_HEADROOM = 1.3;
 
 export interface CostEstimate {
   calls: number;
   lowUsd: number;
   highUsd: number;
+  /** "measured" uses the average from a real earlier run; "assumed" is a guess. */
+  basis: "measured" | "assumed";
 }
 
-function perCall(t: { inputTokens: number; outputTokens: number }): number {
-  return t.inputTokens * INPUT_USD_PER_TOKEN + t.outputTokens * OUTPUT_USD_PER_TOKEN;
+export function usageCostUsd(usage: TokenUsage, prices: Prices): number {
+  const input = (usage.promptTokens * prices.inputPerMillion) / 1_000_000;
+  const output =
+    ((usage.outputTokens + usage.thoughtsTokens) * prices.outputPerMillion) / 1_000_000;
+  return input + output;
 }
 
-/** Rough estimate from measured prompt sizes; verify against Google's price page. */
-export function estimateCost(calls: number): CostEstimate {
+/** Thinking is billed as output, so it is part of the output side here. */
+export function billedOutputTokens(usage: TokenUsage): number {
+  return usage.outputTokens + usage.thoughtsTokens;
+}
+
+const ASSUMED_PER_CALL: Omit<TokenUsage, "calls"> = {
+  promptTokens: 1_300,
+  outputTokens: 800,
+  thoughtsTokens: 600,
+};
+
+export function estimateCost(
+  calls: number,
+  measured: TokenUsage | null,
+  prices: Prices,
+): CostEstimate {
+  if (measured && measured.calls > 0) {
+    const perCall = usageCostUsd(measured, prices) / measured.calls;
+    return {
+      calls,
+      lowUsd: calls * perCall,
+      highUsd: calls * perCall * RETRY_HEADROOM,
+      basis: "measured",
+    };
+  }
+  const guess = usageCostUsd({ calls: 1, ...ASSUMED_PER_CALL }, prices);
   return {
     calls,
-    lowUsd: calls * perCall(LOW),
-    highUsd: calls * RETRY_FACTOR * perCall(HIGH),
+    lowUsd: calls * guess,
+    highUsd: calls * guess * 3,
+    basis: "assumed",
   };
 }
