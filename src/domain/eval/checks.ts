@@ -5,12 +5,9 @@ import {
 } from "@/domain/feedback/taxonomy";
 import type { EnglishCoachFeedback } from "@/domain/practice/english-feedback";
 import type { VietnameseCoachFeedback } from "@/domain/practice/vietnamese-feedback";
+import type { CheckResult, ObservedFeedback } from "./types";
 
-export interface CheckResult {
-  name: string;
-  pass: boolean;
-  detail?: string;
-}
+export type { CheckResult };
 
 export interface VietnameseCase {
   id: string;
@@ -311,4 +308,30 @@ export function evaluateEnglish(
   }
 
   return results;
+}
+
+export function observeVietnamese(fb: VietnameseCoachFeedback): ObservedFeedback {
+  return {
+    summary: fb.summary,
+    improvedVersion: fb.improvedVersion,
+    issues: fb.issues.map((i) => ({
+      category: i.category,
+      code: i.code,
+      evidence: null,
+      naturalness: null,
+    })),
+  };
+}
+
+export function observeEnglish(fb: EnglishCoachFeedback): ObservedFeedback {
+  return {
+    summary: fb.summary,
+    improvedVersion: fb.improvedVersion,
+    issues: fb.issues.map((i) => ({
+      category: i.category,
+      code: i.code,
+      evidence: i.evidence,
+      naturalness: i.naturalness,
+    })),
+  };
 }

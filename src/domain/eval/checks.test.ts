@@ -11,7 +11,10 @@ import {
 } from "./checks";
 import { englishCases } from "./english-cases";
 import { compare, summarize, toOutcome } from "./report";
+import { estimateCost } from "./cost";
 import { vietnameseCases } from "./vietnamese-cases";
+
+const obs = { summary: "", issues: [], improvedVersion: null };
 
 const failed = (results: { name: string; pass: boolean }[]) =>
   results.filter((r) => !r.pass).map((r) => r.name);
@@ -184,16 +187,16 @@ describe("helpers", () => {
 
   it("compares a report with its baseline", () => {
     const base = summarize("r", "v1", [
-      toOutcome("a", [{ name: "x", pass: true }]),
-      toOutcome("b", [{ name: "x", pass: false }]),
+      toOutcome("a", "", [{ name: "x", pass: true }], obs),
+      toOutcome("b", "", [{ name: "x", pass: false }], obs),
     ]);
     const next = summarize("r", "v2", [
-      toOutcome("a", [{ name: "x", pass: false }]),
-      toOutcome("b", [{ name: "x", pass: true }]),
+      toOutcome("a", "", [{ name: "x", pass: false }], obs),
+      toOutcome("b", "", [{ name: "x", pass: true }], obs),
     ]);
     const worse = summarize("r", "v2", [
-      toOutcome("a", [{ name: "x", pass: false }]),
-      toOutcome("b", [{ name: "x", pass: false }]),
+      toOutcome("a", "", [{ name: "x", pass: false }], obs),
+      toOutcome("b", "", [{ name: "x", pass: false }], obs),
     ]);
     expect(compare(next, base)).toMatchObject({
       verdict: "same",
@@ -202,6 +205,14 @@ describe("helpers", () => {
     });
     expect(compare(worse, base).verdict).toBe("worse");
     expect(compare(base, undefined).verdict).toBe("no_baseline");
+  });
+
+  it("estimates a cost range that scales with calls", () => {
+    const small = estimateCost(12);
+    const big = estimateCost(24);
+    expect(small.lowUsd).toBeGreaterThan(0);
+    expect(small.highUsd).toBeGreaterThan(small.lowUsd);
+    expect(big.highUsd).toBeCloseTo(small.highUsd * 2);
   });
 
   it("keeps case ids unique and datasets large enough", () => {

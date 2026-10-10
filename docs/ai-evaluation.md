@@ -357,26 +357,42 @@ cases run on the mock can only prove policy and schema, never prompt quality.
 Judgment is therefore measured against **live Gemini**, opt-in, using only
 deterministic checks (no judge model).
 
-- `pnpm eval` runs `test/eval/coach.eval.ts` (config: `vitest.eval.config.mts`,
-  loads `.env.local`, skipped when the provider is the mock).
-- Datasets: `test/eval/vietnamese-cases.ts` (12) and
-  `test/eval/english-cases.ts` (12).
-- Checks live in `test/eval/checks.ts` and are unit-tested offline in
-  `test/eval/checks.test.ts` (part of `pnpm test`): category/code consistency,
-  no rewrite before attempt 3, response language, evidence is a real quote,
-  natural fillers not over-corrected, voice overlap, comparison gating.
-- Output is a per-role pass-rate compared with `test/eval/baseline.json`, with
-  regressions, fixes and a verdict (better / worse / same).
-- Workflow for a prompt change: bump `promptVersion`, run `pnpm eval`, read the
-  verdict; if it is better or intentionally same, record it with
-  `EVAL_UPDATE_BASELINE=1 pnpm eval`.
-- Free tier allows 5 requests/minute, so calls are paced (`EVAL_RPM`, default
-  5; the full set takes about 5 minutes). Infra errors are reported as
-  INCOMPLETE, excluded from the pass-rate, and never written to the baseline.
-- The free tier also caps requests per day per model (observed: 20). The full
-  set is 24 calls, so run one role per day (`EVAL_ROLE=vietnamese-coach pnpm
-  eval`) or set a model/key with a larger quota. On HTTP 429 the run stops
-  immediately and reports INCOMPLETE.
+Where things live:
+
+- `src/domain/eval/` - datasets (`vietnamese-cases.ts` 12, `english-cases.ts`
+  12), `checks.ts` (pure rules, unit-tested offline), `report.ts`
+  (pass-rate, baseline comparison, verdict), `cost.ts` (cost estimate).
+- `src/application/eval/eval-service.ts` - runs a role, owns the guards.
+- `src/infrastructure/eval/eval-store.ts` - saves the latest run per role and
+  the baseline under `.data/eval/` (git-ignored).
+- UI: `/dev/eval` (dev only, 404 in production, "Prompt Eval" in the sidebar).
+- CLI: `pnpm eval` (config `vitest.eval.config.mts`, wrapper
+  `test/eval/coach.eval.ts`), same service underneath.
+
+How to use the UI:
+
+1. Open `/dev/eval`. Nothing is called on page load.
+2. Click **Run eval** on a role. A confirm box shows the number of calls, the
+   model and an estimated cost range. Only **Confirm and run** calls Gemini.
+3. Read pass-rate, verdict vs baseline, newly failing / newly passing cases.
+   Click a case to see its input, which checks failed and why, and what the
+   model actually said.
+4. When satisfied, **Save this run as baseline**. Later runs compare to it.
+
+Guards (enforced in the service, not only the UI): dev only; the call needs an
+explicit confirmation; refuses the mock provider; one run per role at a time;
+stops on the first HTTP 429 and marks the run incomplete; an incomplete run
+can never become a baseline.
+
+Workflow for a prompt change: bump `promptVersion`, edit the prompt, run the
+role, read the verdict. CLI equivalent:
+`EVAL_ROLE=vietnamese-coach pnpm eval`, add `EVAL_UPDATE_BASELINE=1` to save.
+
+Notes:
+
+- Pacing: `EVAL_RPM` (default 30). Use 5 on a free-tier key.
+- The free tier also caps requests per day per model (observed: 20), less than
+  the 24-case total, so run one role at a time there.
 - Single run per case, so a one-case flip can be model noise; judge by the
   trend across cases, not one case.
 

@@ -10,6 +10,7 @@ import {
   UserCog,
   Brain,
   History,
+  FlaskConical,
 } from "lucide-react";
 
 export interface NavItem {
@@ -50,6 +51,9 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Progress", href: "/progress", icon: LineChart, available: true },
   { label: "History", href: "/history", icon: History, available: true },
   { label: "Profile", href: "/profile", icon: UserCog, available: true },
+  ...(process.env.NODE_ENV === "production"
+    ? []
+    : [{ label: "Prompt Eval", href: "/dev/eval", icon: FlaskConical, available: true }]),
 ];
 
 export { Mic };

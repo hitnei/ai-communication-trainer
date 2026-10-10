@@ -16,6 +16,8 @@ const envSchema = z.object({
   // budget keeps reasoning quality while staying under rate limits. 0 disables.
   GEMINI_THINKING_BUDGET: z.coerce.number().int().min(0).default(512),
   AI_PROVIDER: z.enum(["gemini", "mock", "auto"]).default("auto"),
+  // Request pacing for the prompt eval harness. Lower it on a free-tier key.
+  EVAL_RPM: z.coerce.number().int().min(1).max(6000).default(30),
   DATABASE_PATH: z.string().min(1).default("./.data/app.db"),
   AUDIO_STORAGE_DIR: z.string().min(1).default("./.data/audio"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
